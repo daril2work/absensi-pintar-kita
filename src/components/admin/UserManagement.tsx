@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Users, Shield, User } from 'lucide-react';
 import { format } from 'date-fns';
 import { Database } from '@/integrations/supabase/types';
@@ -15,6 +16,7 @@ type UserRole = Database['public']['Enums']['user_role'];
 
 export const UserManagement = () => {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -44,20 +46,20 @@ export const UserManagement = () => {
 
       if (error) {
         toast({
-          title: "Error",
+          title: t('general.error'),
           description: error.message,
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Success",
-          description: "User role updated successfully!",
+          title: t('general.success'),
+          description: t('notification.roleUpdated'),
         });
         fetchUsers();
       }
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: t('general.error'),
         description: error.message,
         variant: "destructive",
       });
@@ -70,12 +72,12 @@ export const UserManagement = () => {
         {role === 'admin' ? (
           <>
             <Shield className="h-3 w-3 mr-1" />
-            Admin
+            {t('admin.admin')}
           </>
         ) : (
           <>
             <User className="h-3 w-3 mr-1" />
-            User
+            {t('admin.user')}
           </>
         )}
       </Badge>
@@ -87,10 +89,10 @@ export const UserManagement = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users className="h-5 w-5" />
-          User Management
+          {t('admin.userManagement')}
         </CardTitle>
         <CardDescription>
-          Manage user accounts and roles
+          {t('admin.manageUsers')}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -105,10 +107,10 @@ export const UserManagement = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead>{t('general.name')}</TableHead>
+                  <TableHead>{t('general.role')}</TableHead>
+                  <TableHead>{t('general.created')}</TableHead>
+                  <TableHead>{t('general.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -130,8 +132,8 @@ export const UserManagement = () => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="user">User</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="user">{t('admin.user')}</SelectItem>
+                          <SelectItem value="admin">{t('admin.admin')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </TableCell>

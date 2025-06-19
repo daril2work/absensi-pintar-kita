@@ -1,9 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getCurrentLocation, calculateDistance } from '@/utils/location';
@@ -11,9 +11,11 @@ import { Clock, MapPin, Calendar, AlertCircle, LogOut } from 'lucide-react';
 import { format } from 'date-fns';
 import { AttendanceHistory } from '@/components/AttendanceHistory';
 import { MakeupRequestDialog } from '@/components/MakeupRequestDialog';
+import { LanguageToggle } from '@/components/LanguageToggle';
 
 export default function Dashboard() {
   const { user, profile, signOut } = useAuth();
+  const { t } = useLanguage();
   const { toast } = useToast();
   const [isChecking, setIsChecking] = useState(false);
   const [todayAttendance, setTodayAttendance] = useState<any>(null);
@@ -79,8 +81,8 @@ export default function Dashboard() {
 
       if (!nearbyLocation) {
         toast({
-          title: "Location Error",
-          description: "Anda tidak berada di lokasi yang valid untuk absen",
+          title: t('notification.locationError'),
+          description: t('notification.notValidLocation'),
           variant: "destructive",
         });
         return;
@@ -109,20 +111,20 @@ export default function Dashboard() {
 
       if (error) {
         toast({
-          title: "Error",
+          title: t('general.error'),
           description: error.message,
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Success",
-          description: `Absen berhasil! Status: ${status}`,
+          title: t('general.success'),
+          description: `${t('notification.attendanceSuccess')}: ${t(`status.${status}`)}`,
         });
         fetchTodayAttendance();
       }
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: t('general.error'),
         description: error.message,
         variant: "destructive",
       });
@@ -138,7 +140,7 @@ export default function Dashboard() {
       'MAKE_UP': 'outline'
     };
     
-    return <Badge variant={variants[status] || 'default'}>{status}</Badge>;
+    return <Badge variant={variants[status] || 'default'}>{t(`status.${status}`)}</Badge>;
   };
 
   return (
@@ -148,13 +150,16 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-              <p className="text-gray-600">Welcome back, {profile?.name}</p>
+              <h1 className="text-2xl font-bold text-gray-900">{t('dashboard.title')}</h1>
+              <p className="text-gray-600">{t('dashboard.welcome')}, {profile?.name}</p>
             </div>
-            <Button variant="outline" onClick={signOut} className="flex items-center gap-2">
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </Button>
+            <div className="flex items-center gap-4">
+              <LanguageToggle />
+              <Button variant="outline" onClick={signOut} className="flex items-center gap-2">
+                <LogOut className="h-4 w-4" />
+                {t('auth.signOut')}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -168,10 +173,10 @@ export default function Dashboard() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Clock className="h-5 w-5" />
-                  Check In Today
+                  {t('dashboard.checkInToday')}
                 </CardTitle>
                 <CardDescription>
-                  Current time: {format(currentTime, 'HH:mm:ss, dd MMMM yyyy')}
+                  {t('dashboard.currentTime')}: {format(currentTime, 'HH:mm:ss, dd MMMM yyyy')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -179,9 +184,9 @@ export default function Dashboard() {
                   <div className="text-center py-8">
                     <div className="mb-4">
                       <div className="text-4xl mb-2">✅</div>
-                      <h3 className="text-lg font-semibold">Already Checked In</h3>
+                      <h3 className="text-lg font-semibold">{t('dashboard.alreadyCheckedIn')}</h3>
                       <p className="text-gray-600">
-                        Time: {format(new Date(todayAttendance.waktu), 'HH:mm')}
+                        {t('dashboard.time')}: {format(new Date(todayAttendance.waktu), 'HH:mm')}
                       </p>
                       <div className="mt-2">
                         {getStatusBadge(todayAttendance.status)}
@@ -196,10 +201,10 @@ export default function Dashboard() {
                       size="lg"
                       className="text-lg px-8 py-6"
                     >
-                      {isChecking ? "Checking location..." : "Check In Now"}
+                      {isChecking ? t('dashboard.checkingLocation') : t('dashboard.checkInNow')}
                     </Button>
                     <p className="text-sm text-gray-500 mt-2">
-                      Make sure you're at a valid location
+                      {t('dashboard.makeValidLocation')}
                     </p>
                   </div>
                 )}
@@ -217,7 +222,7 @@ export default function Dashboard() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MapPin className="h-5 w-5" />
-                  Valid Locations
+                  {t('dashboard.validLocations')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -226,7 +231,7 @@ export default function Dashboard() {
                     <div key={location.id} className="p-3 bg-gray-50 rounded-lg">
                       <h4 className="font-medium">{location.nama_lokasi}</h4>
                       <p className="text-sm text-gray-600">
-                        Radius: {location.radius_meter}m
+                        {t('dashboard.radius')}: {location.radius_meter}m
                       </p>
                     </div>
                   ))}
@@ -239,10 +244,10 @@ export default function Dashboard() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <AlertCircle className="h-5 w-5" />
-                  Missed Attendance?
+                  {t('dashboard.missedAttendance')}
                 </CardTitle>
                 <CardDescription>
-                  Request make-up time for missed check-ins
+                  {t('dashboard.requestMakeup')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -255,25 +260,25 @@ export default function Dashboard() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Calendar className="h-5 w-5" />
-                  This Month
+                  {t('dashboard.thisMonth')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Total Days</span>
+                    <span className="text-sm text-gray-600">{t('dashboard.totalDays')}</span>
                     <span className="font-medium">22</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Present</span>
+                    <span className="text-sm text-gray-600">{t('dashboard.present')}</span>
                     <span className="font-medium text-green-600">18</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Late</span>
+                    <span className="text-sm text-gray-600">{t('dashboard.late')}</span>
                     <span className="font-medium text-yellow-600">2</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Absent</span>
+                    <span className="text-sm text-gray-600">{t('dashboard.absent')}</span>
                     <span className="font-medium text-red-600">2</span>
                   </div>
                 </div>
