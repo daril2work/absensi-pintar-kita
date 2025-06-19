@@ -50,9 +50,26 @@ const translations = {
     'admin.welcomeBack': 'Selamat datang kembali',
     'admin.reports': 'Laporan',
     'admin.users': 'Pengguna',
+    'admin.devices': 'Perangkat',
     'admin.locations': 'Lokasi',
     'admin.shifts': 'Shift',
     'admin.makeupRequests': 'Permintaan Make-up',
+    
+    // Device Management
+    'admin.deviceManagement': 'Manajemen Perangkat',
+    'admin.manageDevices': 'Kelola perangkat pengguna dan keamanan',
+    'admin.deviceInfo': 'Info Perangkat',
+    'admin.lastSeen': 'Terakhir Dilihat',
+    'admin.securityStatus': 'Status Keamanan',
+    'admin.resetDevice': 'Reset Perangkat',
+    'admin.deviceReset': 'Perangkat berhasil direset!',
+    'admin.resetConfirm': 'Apakah Anda yakin ingin mereset perangkat ini?',
+    'admin.deviceDetails': 'Detail Perangkat',
+    'admin.securityWarnings': 'Peringatan Keamanan',
+    'admin.deviceFingerprint': 'Sidik Jari Perangkat',
+    'admin.riskLevel': 'Level Risiko',
+    'admin.clean': 'Bersih',
+    'admin.warnings': 'peringatan',
     
     // Admin Reports
     'admin.filterExport': 'Filter & Ekspor',
@@ -167,6 +184,7 @@ const translations = {
     'general.time': 'Waktu',
     'general.location': 'Lokasi',
     'general.method': 'Metode',
+    'general.close': 'Tutup',
     
     // Attendance
     'attendance.history': 'Riwayat Absensi',
@@ -224,9 +242,26 @@ const translations = {
     'admin.welcomeBack': 'Welcome back',
     'admin.reports': 'Reports',
     'admin.users': 'Users',
+    'admin.devices': 'Devices',
     'admin.locations': 'Locations',
     'admin.shifts': 'Shifts',
     'admin.makeupRequests': 'Make-up Requests',
+    
+    // Device Management
+    'admin.deviceManagement': 'Device Management',
+    'admin.manageDevices': 'Manage user devices and security',
+    'admin.deviceInfo': 'Device Info',
+    'admin.lastSeen': 'Last Seen',
+    'admin.securityStatus': 'Security Status',
+    'admin.resetDevice': 'Reset Device',
+    'admin.deviceReset': 'Device reset successfully!',
+    'admin.resetConfirm': 'Are you sure you want to reset this device?',
+    'admin.deviceDetails': 'Device Details',
+    'admin.securityWarnings': 'Security Warnings',
+    'admin.deviceFingerprint': 'Device Fingerprint',
+    'admin.riskLevel': 'Risk Level',
+    'admin.clean': 'Clean',
+    'admin.warnings': 'warnings',
     
     // Admin Reports
     'admin.filterExport': 'Filter & Export',
@@ -341,6 +376,7 @@ const translations = {
     'general.time': 'Time',
     'general.location': 'Location',
     'general.method': 'Method',
+    'general.close': 'Close',
     
     // Attendance
     'attendance.history': 'Attendance History',
