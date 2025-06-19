@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,9 +23,9 @@ export const AttendanceReports = () => {
   const [filters, setFilters] = useState({
     startDate: format(new Date(), 'yyyy-MM-01'),
     endDate: format(new Date(), 'yyyy-MM-dd'),
-    userId: '',
-    status: '' as AttendanceStatus | '',
-    method: '' as AttendanceMethod | ''
+    userId: 'all',
+    status: 'all' as AttendanceStatus | 'all',
+    method: 'all' as AttendanceMethod | 'all'
   });
 
   useEffect(() => {
@@ -63,15 +62,15 @@ export const AttendanceReports = () => {
       .lte('waktu', `${filters.endDate}T23:59:59.999Z`)
       .order('waktu', { ascending: false });
 
-    if (filters.userId) {
+    if (filters.userId && filters.userId !== 'all') {
       query = query.eq('user_id', filters.userId);
     }
     
-    if (filters.status) {
+    if (filters.status && filters.status !== 'all') {
       query = query.eq('status', filters.status);
     }
     
-    if (filters.method) {
+    if (filters.method && filters.method !== 'all') {
       query = query.eq('metode', filters.method);
     }
 
@@ -136,9 +135,9 @@ export const AttendanceReports = () => {
     setFilters({
       startDate: format(new Date(), 'yyyy-MM-01'),
       endDate: format(new Date(), 'yyyy-MM-dd'),
-      userId: '',
-      status: '',
-      method: ''
+      userId: 'all',
+      status: 'all',
+      method: 'all'
     });
   };
 
@@ -184,7 +183,7 @@ export const AttendanceReports = () => {
                   <SelectValue placeholder="All employees" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All employees</SelectItem>
+                  <SelectItem value="all">All employees</SelectItem>
                   {users.map((user) => (
                     <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
                   ))}
@@ -194,12 +193,12 @@ export const AttendanceReports = () => {
             
             <div className="space-y-2">
               <Label>Status</Label>
-              <Select value={filters.status} onValueChange={(value: AttendanceStatus | '') => setFilters({ ...filters, status: value })}>
+              <Select value={filters.status} onValueChange={(value: AttendanceStatus | 'all') => setFilters({ ...filters, status: value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All statuses</SelectItem>
+                  <SelectItem value="all">All statuses</SelectItem>
                   <SelectItem value="HADIR">HADIR</SelectItem>
                   <SelectItem value="TERLAMBAT">TERLAMBAT</SelectItem>
                   <SelectItem value="MAKE_UP">MAKE_UP</SelectItem>
@@ -209,12 +208,12 @@ export const AttendanceReports = () => {
             
             <div className="space-y-2">
               <Label>Method</Label>
-              <Select value={filters.method} onValueChange={(value: AttendanceMethod | '') => setFilters({ ...filters, method: value })}>
+              <Select value={filters.method} onValueChange={(value: AttendanceMethod | 'all') => setFilters({ ...filters, method: value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="All methods" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All methods</SelectItem>
+                  <SelectItem value="all">All methods</SelectItem>
                   <SelectItem value="absen">Regular</SelectItem>
                   <SelectItem value="make-up">Make-up</SelectItem>
                 </SelectContent>
