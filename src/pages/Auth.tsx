@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -7,11 +6,14 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { LanguageToggle } from '@/components/LanguageToggle';
 import { useToast } from '@/hooks/use-toast';
 import { Clock, MapPin, Users } from 'lucide-react';
 
 export default function Auth() {
   const { user, profile, signIn, signUp, loading } = useAuth();
+  const { t } = useLanguage();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -48,19 +50,19 @@ export default function Auth() {
       
       if (error) {
         toast({
-          title: "Error",
+          title: t('general.error'),
           description: error.message,
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Success",
+          title: t('general.success'),
           description: "Signed in successfully!",
         });
       }
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: t('general.error'),
         description: error.message,
         variant: "destructive",
       });
@@ -78,19 +80,19 @@ export default function Auth() {
       
       if (error) {
         toast({
-          title: "Error",
+          title: t('general.error'),
           description: error.message,
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Success",
+          title: t('general.success'),
           description: "Account created successfully! Please check your email to verify your account.",
         });
       }
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: t('general.error'),
         description: error.message,
         variant: "destructive",
       });
@@ -101,15 +103,29 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 flex items-center justify-center p-4">
+      {/* Language Toggle */}
+      <div className="absolute top-4 right-4">
+        <LanguageToggle />
+      </div>
+
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-center">
         {/* Left side - Branding */}
         <div className="hidden lg:block space-y-8">
           <div className="space-y-4">
             <h1 className="text-4xl font-bold text-gray-900">
-              Attendance <span className="text-primary">System</span>
+              {t('landing.heroTitle').split(' ').map((word, index) => (
+                <span key={index}>
+                  {index === 1 ? (
+                    <span className="text-primary">{word}</span>
+                  ) : (
+                    word
+                  )}
+                  {index < t('landing.heroTitle').split(' ').length - 1 && ' '}
+                </span>
+              ))}
             </h1>
             <p className="text-xl text-gray-600">
-              Modern attendance tracking with GPS validation and real-time reporting
+              {t('landing.heroSubtitle')}
             </p>
           </div>
           
@@ -119,8 +135,8 @@ export default function Auth() {
                 <MapPin className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <h3 className="font-semibold">GPS Validation</h3>
-                <p className="text-gray-600">Automatic location verification for accurate attendance</p>
+                <h3 className="font-semibold">{t('landing.gpsValidation')}</h3>
+                <p className="text-gray-600">{t('landing.gpsValidationDesc')}</p>
               </div>
             </div>
             
@@ -129,8 +145,8 @@ export default function Auth() {
                 <Clock className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <h3 className="font-semibold">Real-time Tracking</h3>
-                <p className="text-gray-600">Live attendance monitoring and shift management</p>
+                <h3 className="font-semibold">{t('landing.smartTimeTracking')}</h3>
+                <p className="text-gray-600">{t('landing.smartTimeTrackingDesc')}</p>
               </div>
             </div>
             
@@ -139,8 +155,8 @@ export default function Auth() {
                 <Users className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <h3 className="font-semibold">Role-based Access</h3>
-                <p className="text-gray-600">Separate interfaces for employees and administrators</p>
+                <h3 className="font-semibold">{t('landing.roleBasedAccess')}</h3>
+                <p className="text-gray-600">{t('landing.roleBasedAccessDesc')}</p>
               </div>
             </div>
           </div>
@@ -157,14 +173,14 @@ export default function Auth() {
           <CardContent>
             <Tabs defaultValue="signin" className="space-y-4">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signin">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                <TabsTrigger value="signin">{t('auth.signIn')}</TabsTrigger>
+                <TabsTrigger value="signup">{t('auth.signUp')}</TabsTrigger>
               </TabsList>
               
               <TabsContent value="signin">
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signin-email">Email</Label>
+                    <Label htmlFor="signin-email">{t('auth.email')}</Label>
                     <Input
                       id="signin-email"
                       type="email"
@@ -175,7 +191,7 @@ export default function Auth() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signin-password">Password</Label>
+                    <Label htmlFor="signin-password">{t('auth.password')}</Label>
                     <Input
                       id="signin-password"
                       type="password"
@@ -186,7 +202,7 @@ export default function Auth() {
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? "Signing in..." : "Sign In"}
+                    {isLoading ? "Signing in..." : t('auth.signIn')}
                   </Button>
                 </form>
               </TabsContent>
@@ -194,7 +210,7 @@ export default function Auth() {
               <TabsContent value="signup">
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signup-name">Full Name</Label>
+                    <Label htmlFor="signup-name">{t('auth.name')}</Label>
                     <Input
                       id="signup-name"
                       type="text"
@@ -205,7 +221,7 @@ export default function Auth() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
+                    <Label htmlFor="signup-email">{t('auth.email')}</Label>
                     <Input
                       id="signup-email"
                       type="email"
@@ -216,7 +232,7 @@ export default function Auth() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
+                    <Label htmlFor="signup-password">{t('auth.password')}</Label>
                     <Input
                       id="signup-password"
                       type="password"
@@ -227,7 +243,7 @@ export default function Auth() {
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? "Creating account..." : "Sign Up"}
+                    {isLoading ? "Creating account..." : t('auth.signUp')}
                   </Button>
                 </form>
               </TabsContent>

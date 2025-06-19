@@ -1,13 +1,15 @@
-
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { LanguageToggle } from '@/components/LanguageToggle';
 import { Clock, MapPin, Users, Shield, Smartphone, BarChart3 } from 'lucide-react';
 
 const Index = () => {
   const { user, profile, loading } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -27,16 +29,30 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50">
+      {/* Header with Language Toggle */}
+      <div className="absolute top-4 right-4 z-10">
+        <LanguageToggle />
+      </div>
+
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="text-center space-y-8">
             <div className="space-y-4">
               <h1 className="text-4xl md:text-6xl font-bold text-gray-900">
-                Modern <span className="text-primary">Attendance</span> System
+                {t('landing.heroTitle').split(' ').map((word, index) => (
+                  <span key={index}>
+                    {index === 1 ? (
+                      <span className="text-primary">{word}</span>
+                    ) : (
+                      word
+                    )}
+                    {index < t('landing.heroTitle').split(' ').length - 1 && ' '}
+                  </span>
+                ))}
               </h1>
               <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto">
-                GPS-powered attendance tracking with real-time validation, shift management, and comprehensive reporting
+                {t('landing.heroSubtitle')}
               </p>
             </div>
             
@@ -46,7 +62,7 @@ const Index = () => {
                 className="text-lg px-8 py-6"
                 onClick={() => navigate('/auth')}
               >
-                Get Started
+                {t('landing.getStarted')}
               </Button>
               <Button 
                 variant="outline" 
@@ -54,7 +70,7 @@ const Index = () => {
                 className="text-lg px-8 py-6"
                 onClick={() => navigate('/auth')}
               >
-                Sign In
+                {t('landing.signIn')}
               </Button>
             </div>
           </div>
@@ -66,10 +82,10 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-4 mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
-              Powerful Features
+              {t('landing.powerfulFeatures')}
             </h2>
             <p className="text-xl text-gray-600">
-              Everything you need for modern attendance management
+              {t('landing.featuresSubtitle')}
             </p>
           </div>
 
@@ -79,9 +95,9 @@ const Index = () => {
                 <div className="p-3 bg-primary/10 rounded-lg w-fit">
                   <MapPin className="h-8 w-8 text-primary" />
                 </div>
-                <CardTitle>GPS Validation</CardTitle>
+                <CardTitle>{t('landing.gpsValidation')}</CardTitle>
                 <CardDescription>
-                  Automatic location verification ensures employees are at designated work locations
+                  {t('landing.gpsValidationDesc')}
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -91,9 +107,9 @@ const Index = () => {
                 <div className="p-3 bg-primary/10 rounded-lg w-fit">
                   <Clock className="h-8 w-8 text-primary" />
                 </div>
-                <CardTitle>Smart Time Tracking</CardTitle>
+                <CardTitle>{t('landing.smartTimeTracking')}</CardTitle>
                 <CardDescription>
-                  Real-time attendance monitoring with shift-based validation and late detection
+                  {t('landing.smartTimeTrackingDesc')}
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -103,9 +119,9 @@ const Index = () => {
                 <div className="p-3 bg-primary/10 rounded-lg w-fit">
                   <Smartphone className="h-8 w-8 text-primary" />
                 </div>
-                <CardTitle>Mobile-First Design</CardTitle>
+                <CardTitle>{t('landing.mobileFirstDesign')}</CardTitle>
                 <CardDescription>
-                  Optimized for mobile devices with responsive design and native geolocation
+                  {t('landing.mobileFirstDesignDesc')}
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -115,9 +131,9 @@ const Index = () => {
                 <div className="p-3 bg-primary/10 rounded-lg w-fit">
                   <Users className="h-8 w-8 text-primary" />
                 </div>
-                <CardTitle>Make-up Requests</CardTitle>
+                <CardTitle>{t('landing.makeupRequests')}</CardTitle>
                 <CardDescription>
-                  Easy system for employees to request make-up time for missed attendance
+                  {t('landing.makeupRequestsDesc')}
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -127,9 +143,9 @@ const Index = () => {
                 <div className="p-3 bg-primary/10 rounded-lg w-fit">
                   <Shield className="h-8 w-8 text-primary" />
                 </div>
-                <CardTitle>Role-Based Access</CardTitle>
+                <CardTitle>{t('landing.roleBasedAccess')}</CardTitle>
                 <CardDescription>
-                  Separate interfaces and permissions for employees and administrators
+                  {t('landing.roleBasedAccessDesc')}
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -139,9 +155,9 @@ const Index = () => {
                 <div className="p-3 bg-primary/10 rounded-lg w-fit">
                   <BarChart3 className="h-8 w-8 text-primary" />
                 </div>
-                <CardTitle>Advanced Reporting</CardTitle>
+                <CardTitle>{t('landing.advancedReporting')}</CardTitle>
                 <CardDescription>
-                  Comprehensive analytics with export capabilities for CSV and PDF reports
+                  {t('landing.advancedReportingDesc')}
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -154,10 +170,10 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-4 mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
-              How It Works
+              {t('landing.howItWorks')}
             </h2>
             <p className="text-xl text-gray-600">
-              Simple steps to modern attendance tracking
+              {t('landing.howItWorksSubtitle')}
             </p>
           </div>
 
@@ -166,9 +182,9 @@ const Index = () => {
               <div className="p-4 bg-primary/10 rounded-full w-20 h-20 flex items-center justify-center mx-auto">
                 <span className="text-2xl font-bold text-primary">1</span>
               </div>
-              <h3 className="text-xl font-semibold">Check In</h3>
+              <h3 className="text-xl font-semibold">{t('landing.step1Title')}</h3>
               <p className="text-gray-600">
-                Employees open the app and tap check-in. GPS automatically validates their location.
+                {t('landing.step1Desc')}
               </p>
             </div>
 
@@ -176,9 +192,9 @@ const Index = () => {
               <div className="p-4 bg-primary/10 rounded-full w-20 h-20 flex items-center justify-center mx-auto">
                 <span className="text-2xl font-bold text-primary">2</span>
               </div>
-              <h3 className="text-xl font-semibold">Real-time Validation</h3>
+              <h3 className="text-xl font-semibold">{t('landing.step2Title')}</h3>
               <p className="text-gray-600">
-                System validates location, time, and shift schedule to determine attendance status.
+                {t('landing.step2Desc')}
               </p>
             </div>
 
@@ -186,9 +202,9 @@ const Index = () => {
               <div className="p-4 bg-primary/10 rounded-full w-20 h-20 flex items-center justify-center mx-auto">
                 <span className="text-2xl font-bold text-primary">3</span>
               </div>
-              <h3 className="text-xl font-semibold">Analytics & Reports</h3>
+              <h3 className="text-xl font-semibold">{t('landing.step3Title')}</h3>
               <p className="text-gray-600">
-                Admins can view real-time data, generate reports, and manage make-up requests.
+                {t('landing.step3Desc')}
               </p>
             </div>
           </div>
@@ -200,10 +216,10 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="space-y-8">
             <h2 className="text-3xl md:text-4xl font-bold text-white">
-              Ready to Modernize Your Attendance System?
+              {t('landing.readyToModernize')}
             </h2>
             <p className="text-xl text-blue-100 max-w-2xl mx-auto">
-              Join organizations that trust our GPS-powered attendance system for accurate, real-time tracking.
+              {t('landing.readyToModernizeDesc')}
             </p>
             <Button 
               size="lg" 
@@ -211,7 +227,7 @@ const Index = () => {
               className="text-lg px-8 py-6"
               onClick={() => navigate('/auth')}
             >
-              Start Free Today
+              {t('landing.startFreeToday')}
             </Button>
           </div>
         </div>
@@ -221,7 +237,7 @@ const Index = () => {
       <div className="py-8 bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-gray-400">
-            © 2024 Attendance System. Built with modern technology for reliable attendance tracking.
+            {t('landing.footerText')}
           </p>
         </div>
       </div>
