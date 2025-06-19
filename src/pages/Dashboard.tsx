@@ -68,8 +68,8 @@ export default function Dashboard() {
   const handleCheckIn = async () => {
     if (!selectedShift) {
       toast({
-        title: "Shift Required",
-        description: "Please select your shift before checking in.",
+        title: t('shift.shiftRequired'),
+        description: t('shift.pleaseSelectShift'),
         variant: "destructive",
       });
       return;
@@ -90,8 +90,8 @@ export default function Dashboard() {
       // Check if location is secure enough for attendance
       if (!security.isSecure || security.riskLevel === 'high') {
         toast({
-          title: "Security Warning",
-          description: `Location validation failed. Risk level: ${security.riskLevel}. Confidence: ${security.confidence}%`,
+          title: t('security.securityWarning'),
+          description: `${t('security.locationValidationFailed')}: ${security.riskLevel}. ${t('security.confidence')}: ${security.confidence}%`,
           variant: "destructive",
         });
         return;
@@ -100,7 +100,7 @@ export default function Dashboard() {
       // Show warning for medium risk
       if (security.riskLevel === 'medium') {
         const proceed = confirm(
-          `Security Warning: Medium risk detected (${security.confidence}% confidence). Warnings: ${security.warnings.join(', ')}. Do you want to proceed?`
+          `${t('security.securityWarning')}: Medium risk detected (${security.confidence}% ${t('security.confidence')}). Warnings: ${security.warnings.join(', ')}. ${t('security.proceedQuestion')}`
         );
         if (!proceed) return;
       }
@@ -218,11 +218,11 @@ export default function Dashboard() {
     const shiftEnd = selectedShift.jam_keluar;
 
     if (currentTime < shiftStart) {
-      return { status: 'before', message: `Shift starts at ${shiftStart}`, color: 'text-blue-600' };
+      return { status: 'before', message: `${t('shift.shiftStarts')} ${shiftStart}`, color: 'text-blue-600' };
     } else if (currentTime >= shiftStart && currentTime <= shiftEnd) {
-      return { status: 'during', message: `Shift is active until ${shiftEnd}`, color: 'text-green-600' };
+      return { status: 'during', message: `${t('shift.shiftActive')} ${shiftEnd}`, color: 'text-green-600' };
     } else {
-      return { status: 'after', message: `Shift ended at ${shiftEnd}`, color: 'text-gray-600' };
+      return { status: 'after', message: `${t('shift.shiftEnded')} ${shiftEnd}`, color: 'text-gray-600' };
     }
   };
 
@@ -257,7 +257,7 @@ export default function Dashboard() {
             {securityWarnings.length > 0 && (
               <Alert variant={riskLevel === 'high' ? 'destructive' : 'default'}>
                 <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Security Alert - Risk Level: {getRiskBadge(riskLevel)}</AlertTitle>
+                <AlertTitle>{t('security.securityAlert')}: {getRiskBadge(riskLevel)}</AlertTitle>
                 <AlertDescription>
                   <ul className="list-disc list-inside mt-2">
                     {securityWarnings.map((warning, index) => (
@@ -319,9 +319,9 @@ export default function Dashboard() {
                       <div className="space-y-4">
                         <AlertCircle className="h-12 w-12 mx-auto text-amber-500" />
                         <div>
-                          <h3 className="text-lg font-semibold text-amber-700">Select Your Shift First</h3>
+                          <h3 className="text-lg font-semibold text-amber-700">{t('shift.selectShiftFirst')}</h3>
                           <p className="text-sm text-amber-600">
-                            Please choose your working shift above before checking in.
+                            {t('shift.chooseShiftBeforeCheckin')}
                           </p>
                         </div>
                       </div>
@@ -341,11 +341,11 @@ export default function Dashboard() {
                           </p>
                           <div className="flex items-center justify-center gap-2 text-xs text-green-600">
                             <Shield className="h-3 w-3" />
-                            <span>Protected by anti-fraud system</span>
+                            <span>{t('security.protectedByAntiFraud')}</span>
                           </div>
                           {selectedShift && (
                             <div className="text-sm text-blue-600">
-                              Selected Shift: {selectedShift.nama_shift} ({selectedShift.jam_masuk} - {selectedShift.jam_keluar})
+                              {t('shift.selectedShift')}: {selectedShift.nama_shift} ({selectedShift.jam_masuk} - {selectedShift.jam_keluar})
                             </div>
                           )}
                         </div>
@@ -367,27 +367,27 @@ export default function Dashboard() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Shield className="h-5 w-5" />
-                  Security Status
+                  {t('security.securityStatus')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Risk Level</span>
+                    <span className="text-sm text-gray-600">{t('device.riskLevel')}</span>
                     {getRiskBadge(riskLevel)}
                   </div>
                   <div className="text-xs text-gray-500">
                     <div className="flex items-center gap-1 mb-1">
                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span>Mock Location Detection: Active</span>
+                      <span>{t('security.mockLocationDetection')}: {t('security.active')}</span>
                     </div>
                     <div className="flex items-center gap-1 mb-1">
                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span>Device Fingerprinting: Active</span>
+                      <span>{t('security.deviceFingerprinting')}: {t('security.active')}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span>Velocity Check: Active</span>
+                      <span>{t('security.velocityCheck')}: {t('security.active')}</span>
                     </div>
                   </div>
                 </div>

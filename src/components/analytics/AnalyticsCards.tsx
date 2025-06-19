@@ -211,7 +211,7 @@ export const AnalyticsCards = () => {
       <div>
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <Calendar className="h-5 w-5" />
-          Today's Overview
+          {t('analytics.todayOverview')}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Present Today */}
@@ -219,11 +219,11 @@ export const AnalyticsCards = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-green-700">Present Today</p>
+                  <p className="text-sm font-medium text-green-700">{t('analytics.presentToday')}</p>
                   <p className="text-2xl font-bold text-green-900">{analytics.presentToday}</p>
                   <p className="text-xs text-green-600">
                     {analytics.totalEmployees > 0 ? 
-                      `${((analytics.presentToday / analytics.totalEmployees) * 100).toFixed(1)}% of total` 
+                      `${((analytics.presentToday / analytics.totalEmployees) * 100).toFixed(1)}% ${t('analytics.ofTotal')}` 
                       : '0%'
                     }
                   </p>
@@ -240,11 +240,11 @@ export const AnalyticsCards = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-yellow-700">Late Today</p>
+                  <p className="text-sm font-medium text-yellow-700">{t('analytics.lateToday')}</p>
                   <p className="text-2xl font-bold text-yellow-900">{analytics.lateToday}</p>
                   <p className="text-xs text-yellow-600">
                     {analytics.totalEmployees > 0 ? 
-                      `${((analytics.lateToday / analytics.totalEmployees) * 100).toFixed(1)}% of total` 
+                      `${((analytics.lateToday / analytics.totalEmployees) * 100).toFixed(1)}% ${t('analytics.ofTotal')}` 
                       : '0%'
                     }
                   </p>
@@ -261,11 +261,11 @@ export const AnalyticsCards = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-red-700">Absent Today</p>
+                  <p className="text-sm font-medium text-red-700">{t('analytics.absentToday')}</p>
                   <p className="text-2xl font-bold text-red-900">{analytics.absentToday}</p>
                   <p className="text-xs text-red-600">
                     {analytics.totalEmployees > 0 ? 
-                      `${((analytics.absentToday / analytics.totalEmployees) * 100).toFixed(1)}% of total` 
+                      `${((analytics.absentToday / analytics.totalEmployees) * 100).toFixed(1)}% ${t('analytics.ofTotal')}` 
                       : '0%'
                     }
                   </p>
@@ -282,9 +282,9 @@ export const AnalyticsCards = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-blue-700">Total Employees</p>
+                  <p className="text-sm font-medium text-blue-700">{t('analytics.totalEmployees')}</p>
                   <p className="text-2xl font-bold text-blue-900">{analytics.totalEmployees}</p>
-                  <p className="text-xs text-blue-600">Active users</p>
+                  <p className="text-xs text-blue-600">{t('analytics.activeUsers')}</p>
                 </div>
                 <div className="p-3 bg-blue-100 rounded-full">
                   <Users className="h-6 w-6 text-blue-600" />
@@ -299,7 +299,7 @@ export const AnalyticsCards = () => {
       <div>
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <Target className="h-5 w-5" />
-          Performance Metrics
+          {t('analytics.performanceMetrics')}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Attendance Rate */}
@@ -307,7 +307,7 @@ export const AnalyticsCards = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <p className="text-sm font-medium text-purple-700">Attendance Rate</p>
+                  <p className="text-sm font-medium text-purple-700">{t('analytics.attendanceRate')}</p>
                   <div className="flex items-center gap-2">
                     <p className="text-2xl font-bold text-purple-900">
                       {analytics.attendanceRate.toFixed(1)}%
@@ -322,7 +322,7 @@ export const AnalyticsCards = () => {
               <Progress value={analytics.attendanceRate} className="h-2 mb-2" />
               <p className={`text-xs ${getTrendColor(analytics.trends.attendanceChange)}`}>
                 {analytics.trends.attendanceChange > 0 ? '+' : ''}
-                {analytics.trends.attendanceChange.toFixed(1)}% from last month
+                {analytics.trends.attendanceChange.toFixed(1)}% {t('analytics.fromLastMonth')}
               </p>
             </CardContent>
           </Card>
@@ -332,7 +332,7 @@ export const AnalyticsCards = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <p className="text-sm font-medium text-indigo-700">Punctuality Rate</p>
+                  <p className="text-sm font-medium text-indigo-700">{t('analytics.punctualityRate')}</p>
                   <div className="flex items-center gap-2">
                     <p className="text-2xl font-bold text-indigo-900">
                       {analytics.punctualityRate.toFixed(1)}%
@@ -347,7 +347,7 @@ export const AnalyticsCards = () => {
               <Progress value={analytics.punctualityRate} className="h-2 mb-2" />
               <p className={`text-xs ${getTrendColor(analytics.trends.punctualityChange)}`}>
                 {analytics.trends.punctualityChange > 0 ? '+' : ''}
-                {analytics.trends.punctualityChange.toFixed(1)}% from last month
+                {analytics.trends.punctualityChange.toFixed(1)}% {t('analytics.fromLastMonth')}
               </p>
             </CardContent>
           </Card>
@@ -357,7 +357,7 @@ export const AnalyticsCards = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <p className="text-sm font-medium text-teal-700">This Month</p>
+                  <p className="text-sm font-medium text-teal-700">{t('analytics.thisMonth')}</p>
                   <p className="text-2xl font-bold text-teal-900">{analytics.monthlyAttendance.total}</p>
                 </div>
                 <div className="p-3 bg-teal-100 rounded-full">
@@ -366,8 +366,8 @@ export const AnalyticsCards = () => {
               </div>
               <div className="space-y-1">
                 <div className="flex justify-between text-xs">
-                  <span className="text-green-600">Present: {analytics.monthlyAttendance.present}</span>
-                  <span className="text-yellow-600">Late: {analytics.monthlyAttendance.late}</span>
+                  <span className="text-green-600">{t('dashboard.present')}: {analytics.monthlyAttendance.present}</span>
+                  <span className="text-yellow-600">{t('dashboard.late')}: {analytics.monthlyAttendance.late}</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-blue-600">Make-up: {analytics.monthlyAttendance.absent}</span>
@@ -382,7 +382,7 @@ export const AnalyticsCards = () => {
       <div>
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <Shield className="h-5 w-5" />
-          Security & Location Analytics
+          {t('analytics.securityLocationAnalytics')}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Security Risk Levels */}
@@ -390,7 +390,7 @@ export const AnalyticsCards = () => {
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Shield className="h-5 w-5 text-orange-600" />
-                Security Risk Distribution
+                {t('analytics.securityRiskDistribution')}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -398,7 +398,7 @@ export const AnalyticsCards = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="text-sm">Low Risk</span>
+                    <span className="text-sm">{t('analytics.lowRisk')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">{analytics.riskLevels.low}</span>
@@ -414,7 +414,7 @@ export const AnalyticsCards = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                    <span className="text-sm">Medium Risk</span>
+                    <span className="text-sm">{t('analytics.mediumRisk')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">{analytics.riskLevels.medium}</span>
@@ -430,7 +430,7 @@ export const AnalyticsCards = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <span className="text-sm">High Risk</span>
+                    <span className="text-sm">{t('analytics.highRisk')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">{analytics.riskLevels.high}</span>
@@ -451,7 +451,7 @@ export const AnalyticsCards = () => {
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
                 <MapPin className="h-5 w-5 text-cyan-600" />
-                Popular Locations
+                {t('analytics.popularLocations')}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -461,7 +461,7 @@ export const AnalyticsCards = () => {
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">{location.name}</span>
                       <Badge variant="outline" className="text-xs">
-                        {location.count} check-ins
+                        {location.count} {t('analytics.checkIns')}
                       </Badge>
                     </div>
                     <div className="flex items-center gap-2">

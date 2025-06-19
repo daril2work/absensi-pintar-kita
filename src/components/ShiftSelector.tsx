@@ -148,8 +148,8 @@ export const ShiftSelector = ({ userId, onShiftChange, disabled = false }: Shift
   const handleShiftChange = async (shiftId: string) => {
     if (hasAttendanceToday) {
       toast({
-        title: "Cannot Change Shift",
-        description: "You cannot change shift after attendance has been recorded for today.",
+        title: t('shift.cannotChangeAfterAttendance'),
+        description: t('shift.cannotChangeAfterAttendance'),
         variant: "destructive",
       });
       return;
@@ -189,7 +189,7 @@ export const ShiftSelector = ({ userId, onShiftChange, disabled = false }: Shift
 
       toast({
         title: t('general.success'),
-        description: `Shift changed to ${selectedShiftData?.nama_shift} successfully!`,
+        description: `${t('shift.shiftChangedSuccess')} ${selectedShiftData?.nama_shift}!`,
       });
 
       // Refresh user shift data
@@ -212,11 +212,11 @@ export const ShiftSelector = ({ userId, onShiftChange, disabled = false }: Shift
     const shiftEnd = shift.jam_keluar;
 
     if (currentTime >= shiftStart && currentTime <= shiftEnd) {
-      return { status: 'active', label: 'Active Now', color: 'bg-green-100 text-green-800' };
+      return { status: 'active', label: t('shift.status.active'), color: 'bg-green-100 text-green-800' };
     } else if (currentTime < shiftStart) {
-      return { status: 'upcoming', label: 'Upcoming', color: 'bg-blue-100 text-blue-800' };
+      return { status: 'upcoming', label: t('shift.status.upcoming'), color: 'bg-blue-100 text-blue-800' };
     } else {
-      return { status: 'ended', label: 'Ended', color: 'bg-gray-100 text-gray-800' };
+      return { status: 'ended', label: t('shift.status.ended'), color: 'bg-gray-100 text-gray-800' };
     }
   };
 
@@ -233,7 +233,7 @@ export const ShiftSelector = ({ userId, onShiftChange, disabled = false }: Shift
     const end = new Date(`2000-01-01 ${shift.jam_keluar}`);
     const duration = Math.abs(end.getTime() - start.getTime());
     const hours = Math.floor(duration / (1000 * 60 * 60));
-    return `${hours} hours`;
+    return `${hours} ${t('admin.hours')}`;
   };
 
   if (loading) {
@@ -258,10 +258,10 @@ export const ShiftSelector = ({ userId, onShiftChange, disabled = false }: Shift
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Clock className="h-5 w-5" />
-          Today's Shift Selection
+          {t('shift.todayShiftSelection')}
         </CardTitle>
         <CardDescription>
-          Choose your working shift for {format(new Date(), 'dd MMMM yyyy')} ({dayType})
+          {t('shift.chooseWorkingShift')} {format(new Date(), 'dd MMMM yyyy')} ({t(`dayType.${dayType}`)})
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -269,21 +269,21 @@ export const ShiftSelector = ({ userId, onShiftChange, disabled = false }: Shift
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Shift cannot be changed after attendance has been recorded for today.
+              {t('shift.cannotChangeAfterAttendance')}
             </AlertDescription>
           </Alert>
         )}
 
         {/* Shift Selector */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">Select Shift</label>
+          <label className="text-sm font-medium">{t('shift.selectShift')}</label>
           <Select 
             value={selectedShift} 
             onValueChange={handleShiftChange}
             disabled={disabled || saving || hasAttendanceToday}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Choose your shift for today" />
+              <SelectValue placeholder={t('shift.chooseShiftToday')} />
             </SelectTrigger>
             <SelectContent>
               {shifts.map((shift) => {
@@ -314,7 +314,7 @@ export const ShiftSelector = ({ userId, onShiftChange, disabled = false }: Shift
             <div className="flex items-center justify-between">
               <h4 className="font-medium flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-green-600" />
-                Current Shift: {currentShift.nama_shift}
+                {t('shift.currentShift')}: {currentShift.nama_shift}
               </h4>
               {shiftStatus && (
                 <Badge className={shiftStatus.color}>
@@ -325,34 +325,34 @@ export const ShiftSelector = ({ userId, onShiftChange, disabled = false }: Shift
             
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-gray-600">Start Time:</span>
+                <span className="text-gray-600">{t('shift.startTime')}:</span>
                 <p className="font-medium">{currentShift.jam_masuk}</p>
               </div>
               <div>
-                <span className="text-gray-600">End Time:</span>
+                <span className="text-gray-600">{t('shift.endTime')}:</span>
                 <p className="font-medium">{currentShift.jam_keluar}</p>
               </div>
               <div>
-                <span className="text-gray-600">Duration:</span>
+                <span className="text-gray-600">{t('shift.duration')}:</span>
                 <p className="font-medium">{calculateShiftDuration(currentShift)}</p>
               </div>
               <div>
-                <span className="text-gray-600">Day Type:</span>
-                <p className="font-medium capitalize">{currentShift.jenis_hari}</p>
+                <span className="text-gray-600">{t('shift.dayType')}:</span>
+                <p className="font-medium">{t(`dayType.${currentShift.jenis_hari}`)}</p>
               </div>
             </div>
 
             {/* Shift Timeline */}
             <div className="space-y-2">
-              <span className="text-sm text-gray-600">Today's Timeline:</span>
+              <span className="text-sm text-gray-600">{t('shift.todayTimeline')}:</span>
               <div className="flex items-center gap-2 text-xs">
                 <div className="flex items-center gap-1">
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span>Start: {currentShift.jam_masuk}</span>
+                  <span>{t('shift.start')}: {currentShift.jam_masuk}</span>
                 </div>
                 <div className="flex-1 h-px bg-gray-300"></div>
                 <div className="flex items-center gap-1">
-                  <span>End: {currentShift.jam_keluar}</span>
+                  <span>{t('shift.end')}: {currentShift.jam_keluar}</span>
                   <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                 </div>
               </div>
@@ -363,7 +363,9 @@ export const ShiftSelector = ({ userId, onShiftChange, disabled = false }: Shift
         {/* Available Shifts Info */}
         {shifts.length > 1 && (
           <div className="space-y-2">
-            <h5 className="text-sm font-medium text-gray-700">Available Shifts for {dayType}:</h5>
+            <h5 className="text-sm font-medium text-gray-700">
+              {t('shift.availableShifts')} {t(`dayType.${dayType}`)}:
+            </h5>
             <div className="grid gap-2">
               {shifts.map((shift) => {
                 const status = getShiftStatus(shift);
@@ -412,7 +414,7 @@ export const ShiftSelector = ({ userId, onShiftChange, disabled = false }: Shift
           className="w-full"
         >
           <RefreshCw className={`h-4 w-4 mr-2 ${saving ? 'animate-spin' : ''}`} />
-          Refresh Shifts
+          {t('shift.refreshShifts')}
         </Button>
       </CardContent>
     </Card>

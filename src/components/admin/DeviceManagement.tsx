@@ -116,7 +116,7 @@ export const DeviceManagement = () => {
 
       toast({
         title: t('general.success'),
-        description: `Device fingerprint reset successfully for user`,
+        description: t('device.deviceResetSuccess'),
       });
       
       setResetConfirmOpen(false);
@@ -144,7 +144,7 @@ export const DeviceManagement = () => {
   };
 
   const getDeviceInfo = (securityData: any) => {
-    if (!securityData) return 'Unknown Device';
+    if (!securityData) return t('device.unknownDevice');
     
     try {
       const deviceInfo = typeof securityData === 'string' ? JSON.parse(securityData) : securityData;
@@ -159,7 +159,7 @@ export const DeviceManagement = () => {
       // Ignore parsing errors
     }
     
-    return 'Unknown Device';
+    return t('device.unknownDevice');
   };
 
   const getSecurityWarnings = (securityData: any): string[] => {
@@ -190,22 +190,22 @@ export const DeviceManagement = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Smartphone className="h-5 w-5" />
-            Device Management
+            {t('device.deviceManagement')}
           </CardTitle>
           <CardDescription>
-            Manage user devices, reset fingerprints, and monitor security
+            {t('device.manageDevices')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4 items-end">
             <div className="space-y-2 flex-1">
-              <label className="text-sm font-medium">Filter by User</label>
+              <label className="text-sm font-medium">{t('device.filterByUser')}</label>
               <Select value={selectedUser} onValueChange={setSelectedUser}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All users" />
+                  <SelectValue placeholder={t('device.allUsers')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Users</SelectItem>
+                  <SelectItem value="all">{t('device.allUsers')}</SelectItem>
                   {users.map((user) => (
                     <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
                   ))}
@@ -213,7 +213,7 @@ export const DeviceManagement = () => {
               </Select>
             </div>
             <Button variant="outline" onClick={fetchDevices}>
-              Refresh
+              {t('device.refresh')}
             </Button>
           </div>
         </CardContent>
@@ -224,10 +224,10 @@ export const DeviceManagement = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5" />
-            Registered Devices
+            {t('device.registeredDevices')}
           </CardTitle>
           <CardDescription>
-            {devices.length} unique devices found
+            {devices.length} {t('device.uniqueDevicesFound')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -242,12 +242,12 @@ export const DeviceManagement = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Device Info</TableHead>
-                    <TableHead>Risk Level</TableHead>
-                    <TableHead>Last Seen</TableHead>
-                    <TableHead>Security Status</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>{t('device.user')}</TableHead>
+                    <TableHead>{t('device.deviceInfo')}</TableHead>
+                    <TableHead>{t('device.riskLevel')}</TableHead>
+                    <TableHead>{t('device.lastSeen')}</TableHead>
+                    <TableHead>{t('device.securityStatus')}</TableHead>
+                    <TableHead>{t('general.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -278,12 +278,12 @@ export const DeviceManagement = () => {
                             {warnings.length > 0 ? (
                               <div className="flex items-center gap-1 text-amber-600">
                                 <AlertTriangle className="h-4 w-4" />
-                                <span className="text-xs">{warnings.length} warnings</span>
+                                <span className="text-xs">{warnings.length} {t('device.warnings')}</span>
                               </div>
                             ) : (
                               <div className="flex items-center gap-1 text-green-600">
                                 <CheckCircle className="h-4 w-4" />
-                                <span className="text-xs">Clean</span>
+                                <span className="text-xs">{t('device.clean')}</span>
                               </div>
                             )}
                           </div>
@@ -321,9 +321,9 @@ export const DeviceManagement = () => {
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Device Details</DialogTitle>
+            <DialogTitle>{t('device.deviceDetails')}</DialogTitle>
             <DialogDescription>
-              Detailed information about this device and its security status
+              {t('device.detailedInformation')}
             </DialogDescription>
           </DialogHeader>
           
@@ -331,30 +331,30 @@ export const DeviceManagement = () => {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium">User</label>
+                  <label className="text-sm font-medium">{t('device.user')}</label>
                   <p className="text-sm text-gray-600">{selectedDevice.profiles?.name}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Risk Level</label>
+                  <label className="text-sm font-medium">{t('device.riskLevel')}</label>
                   <div className="mt-1">{getRiskBadge(selectedDevice.risk_level || 'low')}</div>
                 </div>
               </div>
               
               <div>
-                <label className="text-sm font-medium">Device Fingerprint</label>
+                <label className="text-sm font-medium">{t('device.deviceFingerprint')}</label>
                 <p className="text-xs text-gray-600 font-mono mt-1 break-all">
                   {selectedDevice.device_fingerprint}
                 </p>
               </div>
               
               <div>
-                <label className="text-sm font-medium">Device Information</label>
+                <label className="text-sm font-medium">{t('device.deviceInformation')}</label>
                 <p className="text-sm text-gray-600 mt-1">{getDeviceInfo(selectedDevice.security_data)}</p>
               </div>
               
               {getSecurityWarnings(selectedDevice.security_data).length > 0 && (
                 <div>
-                  <label className="text-sm font-medium">Security Warnings</label>
+                  <label className="text-sm font-medium">{t('device.securityWarnings')}</label>
                   <div className="mt-2 space-y-1">
                     {getSecurityWarnings(selectedDevice.security_data).map((warning, index) => (
                       <Alert key={index} variant="destructive">
@@ -367,7 +367,7 @@ export const DeviceManagement = () => {
               )}
               
               <div>
-                <label className="text-sm font-medium">Last Activity</label>
+                <label className="text-sm font-medium">{t('device.lastActivity')}</label>
                 <p className="text-sm text-gray-600 mt-1">
                   {format(new Date(selectedDevice.waktu), 'dd MMMM yyyy HH:mm:ss')}
                 </p>
@@ -377,7 +377,7 @@ export const DeviceManagement = () => {
           
           <DialogFooter>
             <Button variant="outline" onClick={() => setDetailsOpen(false)}>
-              Close
+              {t('general.close')}
             </Button>
             <Button 
               onClick={() => {
@@ -387,7 +387,7 @@ export const DeviceManagement = () => {
               className="bg-orange-600 hover:bg-orange-700"
             >
               <RotateCcw className="h-4 w-4 mr-2" />
-              Reset Device
+              {t('device.resetDevice')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -399,22 +399,22 @@ export const DeviceManagement = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-orange-600" />
-              Reset Device Fingerprint
+              {t('device.resetDeviceFingerprint')}
             </DialogTitle>
             <DialogDescription>
-              This action will reset the device fingerprint for this user. They will need to re-register their device on next login.
+              {t('device.resetConfirmation')}
             </DialogDescription>
           </DialogHeader>
           
           {selectedDevice && (
             <Alert>
               <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Confirm Reset</AlertTitle>
+              <AlertTitle>{t('device.confirmReset')}</AlertTitle>
               <AlertDescription>
                 <div className="mt-2 space-y-1">
-                  <p><strong>User:</strong> {selectedDevice.profiles?.name}</p>
-                  <p><strong>Device:</strong> {getDeviceInfo(selectedDevice.security_data)}</p>
-                  <p><strong>Current Risk:</strong> {selectedDevice.risk_level?.toUpperCase()}</p>
+                  <p><strong>{t('device.user')}:</strong> {selectedDevice.profiles?.name}</p>
+                  <p><strong>{t('device.deviceInfo')}:</strong> {getDeviceInfo(selectedDevice.security_data)}</p>
+                  <p><strong>{t('device.currentRisk')}:</strong> {selectedDevice.risk_level?.toUpperCase()}</p>
                 </div>
               </AlertDescription>
             </Alert>
@@ -426,7 +426,7 @@ export const DeviceManagement = () => {
               onClick={() => setResetConfirmOpen(false)}
               disabled={processingReset}
             >
-              Cancel
+              {t('general.cancel')}
             </Button>
             <Button 
               onClick={() => selectedDevice && handleResetDevice(selectedDevice.user_id, selectedDevice.device_fingerprint)}
@@ -434,11 +434,11 @@ export const DeviceManagement = () => {
               className="bg-orange-600 hover:bg-orange-700"
             >
               {processingReset ? (
-                <>Processing...</>
+                <>{t('device.processing')}</>
               ) : (
                 <>
                   <RotateCcw className="h-4 w-4 mr-2" />
-                  Reset Device
+                  {t('device.resetDevice')}
                 </>
               )}
             </Button>
