@@ -9,16 +9,204 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      absensi: {
+        Row: {
+          alasan: string | null
+          approved_by: string | null
+          created_at: string | null
+          id: string
+          lokasi: string | null
+          metode: Database["public"]["Enums"]["attendance_method"]
+          status: Database["public"]["Enums"]["attendance_status"]
+          user_id: string
+          waktu: string
+        }
+        Insert: {
+          alasan?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          id?: string
+          lokasi?: string | null
+          metode?: Database["public"]["Enums"]["attendance_method"]
+          status: Database["public"]["Enums"]["attendance_status"]
+          user_id: string
+          waktu?: string
+        }
+        Update: {
+          alasan?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          id?: string
+          lokasi?: string | null
+          metode?: Database["public"]["Enums"]["attendance_method"]
+          status?: Database["public"]["Enums"]["attendance_status"]
+          user_id?: string
+          waktu?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "absensi_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "absensi_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lokasi_valid: {
+        Row: {
+          aktif: boolean
+          created_at: string | null
+          id: string
+          latitude: number
+          longitude: number
+          nama_lokasi: string
+          radius_meter: number
+        }
+        Insert: {
+          aktif?: boolean
+          created_at?: string | null
+          id?: string
+          latitude: number
+          longitude: number
+          nama_lokasi: string
+          radius_meter?: number
+        }
+        Update: {
+          aktif?: boolean
+          created_at?: string | null
+          id?: string
+          latitude?: number
+          longitude?: number
+          nama_lokasi?: string
+          radius_meter?: number
+        }
+        Relationships: []
+      }
+      makeup_requests: {
+        Row: {
+          admin_notes: string | null
+          alasan: string
+          approved_by: string | null
+          bukti_url: string | null
+          created_at: string | null
+          id: string
+          status: Database["public"]["Enums"]["request_status"]
+          tanggal_absen: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          alasan: string
+          approved_by?: string | null
+          bukti_url?: string | null
+          created_at?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["request_status"]
+          tanggal_absen: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          alasan?: string
+          approved_by?: string | null
+          bukti_url?: string | null
+          created_at?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["request_status"]
+          tanggal_absen?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "makeup_requests_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "makeup_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          name: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      shift: {
+        Row: {
+          created_at: string | null
+          id: string
+          jam_keluar: string
+          jam_masuk: string
+          nama_shift: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          jam_keluar: string
+          jam_masuk: string
+          nama_shift: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          jam_keluar?: string
+          jam_masuk?: string
+          nama_shift?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { user_uuid: string }
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
     }
     Enums: {
-      [_ in never]: never
+      attendance_method: "absen" | "make-up"
+      attendance_status: "HADIR" | "TERLAMBAT" | "MAKE_UP"
+      request_status: "pending" | "approved" | "rejected"
+      user_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +321,11 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      attendance_method: ["absen", "make-up"],
+      attendance_status: ["HADIR", "TERLAMBAT", "MAKE_UP"],
+      request_status: ["pending", "approved", "rejected"],
+      user_role: ["admin", "user"],
+    },
   },
 } as const
