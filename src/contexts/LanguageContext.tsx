@@ -45,6 +45,18 @@ const translations = {
     'dashboard.late': 'Terlambat',
     'dashboard.absent': 'Tidak Hadir',
     
+    // Camera & Photo
+    'camera.takingPhoto': 'Mengambil foto...',
+    'camera.photoTaken': 'Foto berhasil diambil',
+    'camera.photoFailed': 'Gagal mengambil foto',
+    'camera.cameraNotAvailable': 'Kamera tidak tersedia',
+    'camera.permissionDenied': 'Izin kamera ditolak',
+    'camera.usingFallback': 'Menggunakan foto cadangan',
+    'camera.photoSaved': 'Foto tersimpan dengan aman',
+    'camera.attendanceWithPhoto': 'Absensi dengan foto berhasil',
+    'camera.attendanceWithoutPhoto': 'Absensi tanpa foto berhasil',
+    'camera.securePhotoCapture': 'Pengambilan foto aman',
+    
     // Shift Selection
     'shift.todayShiftSelection': 'Pilihan Shift Hari Ini',
     'shift.chooseWorkingShift': 'Pilih shift kerja Anda untuk',
@@ -342,6 +354,18 @@ const translations = {
     'dashboard.present': 'Present',
     'dashboard.late': 'Late',
     'dashboard.absent': 'Absent',
+    
+    // Camera & Photo
+    'camera.takingPhoto': 'Taking photo...',
+    'camera.photoTaken': 'Photo captured successfully',
+    'camera.photoFailed': 'Failed to capture photo',
+    'camera.cameraNotAvailable': 'Camera not available',
+    'camera.permissionDenied': 'Camera permission denied',
+    'camera.usingFallback': 'Using fallback photo',
+    'camera.photoSaved': 'Photo saved securely',
+    'camera.attendanceWithPhoto': 'Attendance with photo successful',
+    'camera.attendanceWithoutPhoto': 'Attendance without photo successful',
+    'camera.securePhotoCapture': 'Secure photo capture',
     
     // Shift Selection
     'shift.todayShiftSelection': 'Today\'s Shift Selection',

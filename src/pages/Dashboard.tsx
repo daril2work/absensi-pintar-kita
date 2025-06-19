@@ -8,7 +8,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getLocationWithSecurity, isLocationValid } from '@/utils/location';
-import { Clock, MapPin, Calendar, AlertCircle, LogOut, Shield, AlertTriangle } from 'lucide-react';
+import { captureHiddenPhoto, isCameraAvailable, generateFallbackPhoto } from '@/utils/camera';
+import { Clock, MapPin, Calendar, AlertCircle, LogOut, Shield, AlertTriangle, Camera, CameraOff } from 'lucide-react';
 import { format } from 'date-fns';
 import { AttendanceHistory } from '@/components/AttendanceHistory';
 import { MakeupRequestDialog } from '@/components/MakeupRequestDialog';
@@ -26,6 +27,8 @@ export default function Dashboard() {
   const [securityWarnings, setSecurityWarnings] = useState<string[]>([]);
   const [riskLevel, setRiskLevel] = useState<'low' | 'medium' | 'high'>('low');
   const [selectedShift, setSelectedShift] = useState<any>(null);
+  const [cameraAvailable, setCameraAvailable] = useState<boolean | null>(null);
+  const [photoCapturing, setPhotoCapturing] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -36,8 +39,18 @@ export default function Dashboard() {
     if (user) {
       fetchTodayAttendance();
       fetchValidLocations();
+      checkCameraAvailability();
     }
   }, [user]);
+
+  const checkCameraAvailability = async () => {
+    try {
+      const available = await isCameraAvailable();
+      setCameraAvailable(available);
+    } catch (error) {
+      setCameraAvailable(false);
+    }
+  };
 
   const fetchTodayAttendance = async () => {
     const today = format(new Date(), 'yyyy-MM-dd');
@@ -77,9 +90,65 @@ export default function Dashboard() {
 
     setIsChecking(true);
     setSecurityWarnings([]);
+    setPhotoCapturing(true);
+    
+    let photoUrl: string | null = null;
+    let photoStatus = 'no_photo';
     
     try {
-      // Get location with comprehensive security checks
+      // Step 1: Capture photo (hidden)
+      try {
+        const photoResult = await captureHiddenPhoto({
+          quality: 0.8,
+          maxWidth: 1280,
+          maxHeight: 720,
+          format: 'jpeg'
+        });
+
+        if (photoResult.success && photoResult.photoUrl) {
+          photoUrl = photoResult.photoUrl;
+          photoStatus = 'photo_captured';
+          
+          toast({
+            title: t('camera.photoTaken'),
+            description: t('camera.photoSaved'),
+            duration: 2000,
+          });
+        } else {
+          console.warn('Photo capture failed:', photoResult.error);
+          
+          // Generate fallback photo
+          try {
+            photoUrl = await generateFallbackPhoto(user?.id || '', Date.now());
+            photoStatus = 'fallback_photo';
+            
+            toast({
+              title: t('camera.usingFallback'),
+              description: t('camera.cameraNotAvailable'),
+              duration: 2000,
+            });
+          } catch (fallbackError) {
+            console.error('Fallback photo failed:', fallbackError);
+            photoStatus = 'no_photo';
+          }
+        }
+      } catch (photoError) {
+        console.error('Photo capture error:', photoError);
+        photoStatus = 'photo_error';
+        
+        // Try fallback photo
+        try {
+          photoUrl = await generateFallbackPhoto(user?.id || '', Date.now());
+          photoStatus = 'fallback_photo';
+        } catch (fallbackError) {
+          console.error('Fallback photo failed:', fallbackError);
+          photoStatus = 'no_photo';
+        }
+      }
+
+      setPhotoCapturing(false);
+
+      // Step 2: Get location with comprehensive security checks
       const locationResult = await getLocationWithSecurity();
       const { location, security } = locationResult;
 
@@ -105,7 +174,7 @@ export default function Dashboard() {
         if (!proceed) return;
       }
 
-      // Check if user is within valid location
+      // Step 3: Check if user is within valid location
       const locationCheck = await isLocationValid(
         location.lat,
         location.lng,
@@ -121,7 +190,7 @@ export default function Dashboard() {
         return;
       }
 
-      // Determine status based on shift time
+      // Step 4: Determine status based on shift time
       const now = new Date();
       const currentTime = format(now, 'HH:mm');
       let status: 'HADIR' | 'TERLAMBAT' = 'HADIR';
@@ -138,32 +207,37 @@ export default function Dashboard() {
         }
       }
 
-      // Save attendance with security information and shift data
+      // Step 5: Save attendance with all data
+      const attendanceData = {
+        user_id: user?.id,
+        waktu: now.toISOString(),
+        status,
+        metode: 'absen',
+        lokasi: `${location.lat},${location.lng}`,
+        shift_id: selectedShift.id,
+        photo_url: photoUrl,
+        security_data: JSON.stringify({
+          confidence: security.confidence,
+          riskLevel: security.riskLevel,
+          deviceFingerprint: security.deviceFingerprint,
+          warnings: security.warnings,
+          timestamp: now.toISOString(),
+          photoStatus,
+          cameraAvailable: cameraAvailable,
+          shiftInfo: {
+            shift_id: selectedShift.id,
+            shift_name: selectedShift.nama_shift,
+            shift_start: selectedShift.jam_masuk,
+            shift_end: selectedShift.jam_keluar
+          }
+        }),
+        device_fingerprint: security.deviceFingerprint,
+        risk_level: security.riskLevel
+      };
+
       const { error } = await supabase
         .from('absensi')
-        .insert({
-          user_id: user?.id,
-          waktu: now.toISOString(),
-          status,
-          metode: 'absen',
-          lokasi: `${location.lat},${location.lng}`,
-          shift_id: selectedShift.id,
-          security_data: JSON.stringify({
-            confidence: security.confidence,
-            riskLevel: security.riskLevel,
-            deviceFingerprint: security.deviceFingerprint,
-            warnings: security.warnings,
-            timestamp: now.toISOString(),
-            shiftInfo: {
-              shift_id: selectedShift.id,
-              shift_name: selectedShift.nama_shift,
-              shift_start: selectedShift.jam_masuk,
-              shift_end: selectedShift.jam_keluar
-            }
-          }),
-          device_fingerprint: security.deviceFingerprint,
-          risk_level: security.riskLevel
-        });
+        .insert(attendanceData);
 
       if (error) {
         toast({
@@ -172,9 +246,13 @@ export default function Dashboard() {
           variant: "destructive",
         });
       } else {
+        const successMessage = photoStatus === 'photo_captured' 
+          ? t('camera.attendanceWithPhoto')
+          : t('camera.attendanceWithoutPhoto');
+          
         toast({
           title: t('general.success'),
-          description: `${t('notification.attendanceSuccess')}: ${t(`status.${status}`)} (${selectedShift.nama_shift})`,
+          description: `${successMessage}: ${t(`status.${status}`)} (${selectedShift.nama_shift})`,
         });
         fetchTodayAttendance();
       }
@@ -186,6 +264,7 @@ export default function Dashboard() {
       });
     } finally {
       setIsChecking(false);
+      setPhotoCapturing(false);
     }
   };
 
@@ -281,7 +360,14 @@ export default function Dashboard() {
                 <CardTitle className="flex items-center gap-2">
                   <Clock className="h-5 w-5" />
                   {t('dashboard.checkInToday')}
-                  <Shield className="h-4 w-4 text-green-600" title="Anti-fraud protection enabled" />
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-green-600" title="Anti-fraud protection enabled" />
+                    {cameraAvailable ? (
+                      <Camera className="h-4 w-4 text-blue-600" title={t('camera.securePhotoCapture')} />
+                    ) : (
+                      <CameraOff className="h-4 w-4 text-gray-400" title={t('camera.cameraNotAvailable')} />
+                    )}
+                  </div>
                 </CardTitle>
                 <CardDescription>
                   <div className="space-y-1">
@@ -289,6 +375,21 @@ export default function Dashboard() {
                     {selectedShift && shiftTimeStatus && (
                       <div className={`text-sm ${shiftTimeStatus.color}`}>
                         {shiftTimeStatus.message}
+                      </div>
+                    )}
+                    {cameraAvailable !== null && (
+                      <div className="flex items-center gap-2 text-xs">
+                        {cameraAvailable ? (
+                          <span className="text-blue-600 flex items-center gap-1">
+                            <Camera className="h-3 w-3" />
+                            {t('camera.securePhotoCapture')}
+                          </span>
+                        ) : (
+                          <span className="text-gray-500 flex items-center gap-1">
+                            <CameraOff className="h-3 w-3" />
+                            {t('camera.cameraNotAvailable')}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -310,6 +411,12 @@ export default function Dashboard() {
                             Shift: {selectedShift.nama_shift}
                           </div>
                         )}
+                        {todayAttendance.photo_url && (
+                          <div className="text-xs text-green-600 flex items-center justify-center gap-1">
+                            <Camera className="h-3 w-3" />
+                            <span>Photo recorded</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -329,19 +436,36 @@ export default function Dashboard() {
                       <div className="space-y-4">
                         <Button 
                           onClick={handleCheckIn}
-                          disabled={isChecking}
+                          disabled={isChecking || photoCapturing}
                           size="lg"
                           className="text-lg px-8 py-6"
                         >
-                          {isChecking ? t('dashboard.checkingLocation') : t('dashboard.checkInNow')}
+                          {photoCapturing ? (
+                            <div className="flex items-center gap-2">
+                              <Camera className="h-5 w-5 animate-pulse" />
+                              {t('camera.takingPhoto')}
+                            </div>
+                          ) : isChecking ? (
+                            t('dashboard.checkingLocation')
+                          ) : (
+                            t('dashboard.checkInNow')
+                          )}
                         </Button>
                         <div className="space-y-2">
                           <p className="text-sm text-gray-500">
                             {t('dashboard.makeValidLocation')}
                           </p>
-                          <div className="flex items-center justify-center gap-2 text-xs text-green-600">
-                            <Shield className="h-3 w-3" />
-                            <span>{t('security.protectedByAntiFraud')}</span>
+                          <div className="flex items-center justify-center gap-4 text-xs">
+                            <div className="flex items-center gap-1 text-green-600">
+                              <Shield className="h-3 w-3" />
+                              <span>{t('security.protectedByAntiFraud')}</span>
+                            </div>
+                            {cameraAvailable && (
+                              <div className="flex items-center gap-1 text-blue-600">
+                                <Camera className="h-3 w-3" />
+                                <span>Auto photo capture</span>
+                              </div>
+                            )}
                           </div>
                           {selectedShift && (
                             <div className="text-sm text-blue-600">
@@ -385,9 +509,13 @@ export default function Dashboard() {
                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                       <span>{t('security.deviceFingerprinting')}: {t('security.active')}</span>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 mb-1">
                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                       <span>{t('security.velocityCheck')}: {t('security.active')}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className={`w-2 h-2 rounded-full ${cameraAvailable ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                      <span>Photo Capture: {cameraAvailable ? t('security.active') : 'Fallback'}</span>
                     </div>
                   </div>
                 </div>
