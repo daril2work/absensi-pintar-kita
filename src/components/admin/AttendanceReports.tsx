@@ -11,6 +11,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Download, FileText, Filter } from 'lucide-react';
 import { format } from 'date-fns';
+import { Database } from '@/integrations/supabase/types';
+
+type AttendanceStatus = Database['public']['Enums']['attendance_status'];
+type AttendanceMethod = Database['public']['Enums']['attendance_method'];
 
 export const AttendanceReports = () => {
   const { toast } = useToast();
@@ -21,8 +25,8 @@ export const AttendanceReports = () => {
     startDate: format(new Date(), 'yyyy-MM-01'),
     endDate: format(new Date(), 'yyyy-MM-dd'),
     userId: '',
-    status: '',
-    method: ''
+    status: '' as AttendanceStatus | '',
+    method: '' as AttendanceMethod | ''
   });
 
   useEffect(() => {
@@ -190,7 +194,7 @@ export const AttendanceReports = () => {
             
             <div className="space-y-2">
               <Label>Status</Label>
-              <Select value={filters.status} onValueChange={(value) => setFilters({ ...filters, status: value })}>
+              <Select value={filters.status} onValueChange={(value: AttendanceStatus | '') => setFilters({ ...filters, status: value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
@@ -205,7 +209,7 @@ export const AttendanceReports = () => {
             
             <div className="space-y-2">
               <Label>Method</Label>
-              <Select value={filters.method} onValueChange={(value) => setFilters({ ...filters, method: value })}>
+              <Select value={filters.method} onValueChange={(value: AttendanceMethod | '') => setFilters({ ...filters, method: value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="All methods" />
                 </SelectTrigger>

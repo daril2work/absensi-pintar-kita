@@ -9,6 +9,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Users, Shield, User } from 'lucide-react';
 import { format } from 'date-fns';
+import { Database } from '@/integrations/supabase/types';
+
+type UserRole = Database['public']['Enums']['user_role'];
 
 export const UserManagement = () => {
   const { toast } = useToast();
@@ -32,7 +35,7 @@ export const UserManagement = () => {
     setLoading(false);
   };
 
-  const handleRoleChange = async (userId: string, newRole: string) => {
+  const handleRoleChange = async (userId: string, newRole: UserRole) => {
     try {
       const { error } = await supabase
         .from('profiles')
@@ -121,7 +124,7 @@ export const UserManagement = () => {
                     <TableCell>
                       <Select
                         value={user.role}
-                        onValueChange={(value) => handleRoleChange(user.id, value)}
+                        onValueChange={(value: UserRole) => handleRoleChange(user.id, value)}
                       >
                         <SelectTrigger className="w-32">
                           <SelectValue />
