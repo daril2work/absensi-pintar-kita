@@ -13,6 +13,7 @@ import { format } from 'date-fns';
 import { AttendanceHistory } from '@/components/AttendanceHistory';
 import { MakeupRequestDialog } from '@/components/MakeupRequestDialog';
 import { LanguageToggle } from '@/components/LanguageToggle';
+import { ShiftSelector } from '@/components/ShiftSelector';
 
 export default function Dashboard() {
   const { user, profile, signOut } = useAuth();
@@ -24,6 +25,7 @@ export default function Dashboard() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [securityWarnings, setSecurityWarnings] = useState<string[]>([]);
   const [riskLevel, setRiskLevel] = useState<'low' | 'medium' | 'high'>('low');
+  const [selectedShift, setSelectedShift] = useState<any>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -64,6 +66,15 @@ export default function Dashboard() {
   };
 
   const handleCheckIn = async () => {
+    if (!selectedShift) {
+      toast({
+        title: "Shift Required",
+        description: "Please select your shift before checking in.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsChecking(true);
     setSecurityWarnings([]);
     
@@ -110,17 +121,24 @@ export default function Dashboard() {
         return;
       }
 
-      // Determine status based on time (simplified - you can make this more sophisticated)
+      // Determine status based on shift time
       const now = new Date();
-      const currentHour = now.getHours();
+      const currentTime = format(now, 'HH:mm');
       let status: 'HADIR' | 'TERLAMBAT' = 'HADIR';
       
-      // If after 8:30 AM, mark as late (you can customize this logic)
-      if (currentHour > 8 || (currentHour === 8 && now.getMinutes() > 30)) {
-        status = 'TERLAMBAT';
+      // Check if late based on shift start time
+      if (selectedShift && currentTime > selectedShift.jam_masuk) {
+        // Add grace period of 15 minutes
+        const shiftStart = new Date(`2000-01-01 ${selectedShift.jam_masuk}`);
+        const graceTime = new Date(shiftStart.getTime() + 15 * 60000); // 15 minutes
+        const currentDateTime = new Date(`2000-01-01 ${currentTime}`);
+        
+        if (currentDateTime > graceTime) {
+          status = 'TERLAMBAT';
+        }
       }
 
-      // Save attendance with security information
+      // Save attendance with security information and shift data
       const { error } = await supabase
         .from('absensi')
         .insert({
@@ -129,13 +147,22 @@ export default function Dashboard() {
           status,
           metode: 'absen',
           lokasi: `${location.lat},${location.lng}`,
+          shift_id: selectedShift.id,
           security_data: JSON.stringify({
             confidence: security.confidence,
             riskLevel: security.riskLevel,
             deviceFingerprint: security.deviceFingerprint,
             warnings: security.warnings,
-            timestamp: now.toISOString()
-          })
+            timestamp: now.toISOString(),
+            shiftInfo: {
+              shift_id: selectedShift.id,
+              shift_name: selectedShift.nama_shift,
+              shift_start: selectedShift.jam_masuk,
+              shift_end: selectedShift.jam_keluar
+            }
+          }),
+          device_fingerprint: security.deviceFingerprint,
+          risk_level: security.riskLevel
         });
 
       if (error) {
@@ -147,7 +174,7 @@ export default function Dashboard() {
       } else {
         toast({
           title: t('general.success'),
-          description: `${t('notification.attendanceSuccess')}: ${t(`status.${status}`)}`,
+          description: `${t('notification.attendanceSuccess')}: ${t(`status.${status}`)} (${selectedShift.nama_shift})`,
         });
         fetchTodayAttendance();
       }
@@ -181,6 +208,25 @@ export default function Dashboard() {
     
     return <Badge variant={variants[risk]}>{risk.toUpperCase()}</Badge>;
   };
+
+  const getShiftTimeStatus = () => {
+    if (!selectedShift) return null;
+    
+    const now = new Date();
+    const currentTime = format(now, 'HH:mm');
+    const shiftStart = selectedShift.jam_masuk;
+    const shiftEnd = selectedShift.jam_keluar;
+
+    if (currentTime < shiftStart) {
+      return { status: 'before', message: `Shift starts at ${shiftStart}`, color: 'text-blue-600' };
+    } else if (currentTime >= shiftStart && currentTime <= shiftEnd) {
+      return { status: 'during', message: `Shift is active until ${shiftEnd}`, color: 'text-green-600' };
+    } else {
+      return { status: 'after', message: `Shift ended at ${shiftEnd}`, color: 'text-gray-600' };
+    }
+  };
+
+  const shiftTimeStatus = getShiftTimeStatus();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -222,6 +268,13 @@ export default function Dashboard() {
               </Alert>
             )}
 
+            {/* Shift Selection */}
+            <ShiftSelector 
+              userId={user?.id || ''} 
+              onShiftChange={setSelectedShift}
+              disabled={!!todayAttendance}
+            />
+
             {/* Current time and check-in */}
             <Card>
               <CardHeader>
@@ -231,7 +284,14 @@ export default function Dashboard() {
                   <Shield className="h-4 w-4 text-green-600" title="Anti-fraud protection enabled" />
                 </CardTitle>
                 <CardDescription>
-                  {t('dashboard.currentTime')}: {format(currentTime, 'HH:mm:ss, dd MMMM yyyy')}
+                  <div className="space-y-1">
+                    <div>{t('dashboard.currentTime')}: {format(currentTime, 'HH:mm:ss, dd MMMM yyyy')}</div>
+                    {selectedShift && shiftTimeStatus && (
+                      <div className={`text-sm ${shiftTimeStatus.color}`}>
+                        {shiftTimeStatus.message}
+                      </div>
+                    )}
+                  </div>
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -243,28 +303,54 @@ export default function Dashboard() {
                       <p className="text-gray-600">
                         {t('dashboard.time')}: {format(new Date(todayAttendance.waktu), 'HH:mm')}
                       </p>
-                      <div className="mt-2">
+                      <div className="mt-2 space-y-1">
                         {getStatusBadge(todayAttendance.status)}
+                        {todayAttendance.shift_id && selectedShift && (
+                          <div className="text-sm text-gray-500">
+                            Shift: {selectedShift.nama_shift}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
                 ) : (
                   <div className="text-center py-8">
-                    <Button 
-                      onClick={handleCheckIn}
-                      disabled={isChecking}
-                      size="lg"
-                      className="text-lg px-8 py-6"
-                    >
-                      {isChecking ? t('dashboard.checkingLocation') : t('dashboard.checkInNow')}
-                    </Button>
-                    <p className="text-sm text-gray-500 mt-2">
-                      {t('dashboard.makeValidLocation')}
-                    </p>
-                    <div className="flex items-center justify-center gap-2 mt-2 text-xs text-green-600">
-                      <Shield className="h-3 w-3" />
-                      <span>Protected by anti-fraud system</span>
-                    </div>
+                    {!selectedShift ? (
+                      <div className="space-y-4">
+                        <AlertCircle className="h-12 w-12 mx-auto text-amber-500" />
+                        <div>
+                          <h3 className="text-lg font-semibold text-amber-700">Select Your Shift First</h3>
+                          <p className="text-sm text-amber-600">
+                            Please choose your working shift above before checking in.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <Button 
+                          onClick={handleCheckIn}
+                          disabled={isChecking}
+                          size="lg"
+                          className="text-lg px-8 py-6"
+                        >
+                          {isChecking ? t('dashboard.checkingLocation') : t('dashboard.checkInNow')}
+                        </Button>
+                        <div className="space-y-2">
+                          <p className="text-sm text-gray-500">
+                            {t('dashboard.makeValidLocation')}
+                          </p>
+                          <div className="flex items-center justify-center gap-2 text-xs text-green-600">
+                            <Shield className="h-3 w-3" />
+                            <span>Protected by anti-fraud system</span>
+                          </div>
+                          {selectedShift && (
+                            <div className="text-sm text-blue-600">
+                              Selected Shift: {selectedShift.nama_shift} ({selectedShift.jam_masuk} - {selectedShift.jam_keluar})
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>

@@ -1,0 +1,420 @@
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { Clock, Calendar, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { format, isWeekend } from 'date-fns';
+
+interface Shift {
+  id: string;
+  nama_shift: string;
+  jam_masuk: string;
+  jam_keluar: string;
+  jenis_hari: 'weekday' | 'weekend' | 'holiday' | 'all';
+  aktif: boolean;
+}
+
+interface UserShift {
+  id?: string;
+  user_id: string;
+  shift_id: string;
+  tanggal: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface ShiftSelectorProps {
+  userId: string;
+  onShiftChange?: (shift: Shift | null) => void;
+  disabled?: boolean;
+}
+
+export const ShiftSelector = ({ userId, onShiftChange, disabled = false }: ShiftSelectorProps) => {
+  const { toast } = useToast();
+  const { t } = useLanguage();
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [selectedShift, setSelectedShift] = useState<string>('');
+  const [currentUserShift, setCurrentUserShift] = useState<UserShift | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [hasAttendanceToday, setHasAttendanceToday] = useState(false);
+
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const isWeekendDay = isWeekend(new Date());
+  const dayType = isWeekendDay ? 'weekend' : 'weekday';
+
+  useEffect(() => {
+    fetchShifts();
+    fetchUserShift();
+    checkTodayAttendance();
+  }, [userId]);
+
+  const fetchShifts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('shift')
+        .select('*')
+        .eq('aktif', true)
+        .or(`jenis_hari.eq.${dayType},jenis_hari.eq.all`)
+        .order('jam_masuk');
+
+      if (error) throw error;
+      setShifts(data || []);
+    } catch (error: any) {
+      toast({
+        title: t('general.error'),
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchUserShift = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_shifts')
+        .select(`
+          *,
+          shift:shift_id (*)
+        `)
+        .eq('user_id', userId)
+        .eq('tanggal', today)
+        .single();
+
+      if (!error && data) {
+        setCurrentUserShift(data);
+        setSelectedShift(data.shift_id);
+        onShiftChange?.(data.shift);
+      } else {
+        // No shift assigned for today, try to get default shift
+        await fetchDefaultShift();
+      }
+    } catch (error: any) {
+      console.log('No user shift found for today');
+      await fetchDefaultShift();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchDefaultShift = async () => {
+    try {
+      // Get user's most recent shift or first available shift
+      const { data: recentShift } = await supabase
+        .from('user_shifts')
+        .select('shift_id')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (recentShift) {
+        setSelectedShift(recentShift.shift_id);
+      } else if (shifts.length > 0) {
+        // Default to first available shift
+        setSelectedShift(shifts[0].id);
+      }
+    } catch (error) {
+      // No previous shifts found
+      if (shifts.length > 0) {
+        setSelectedShift(shifts[0].id);
+      }
+    }
+  };
+
+  const checkTodayAttendance = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('absensi')
+        .select('id')
+        .eq('user_id', userId)
+        .gte('waktu', `${today}T00:00:00.000Z`)
+        .lt('waktu', `${today}T23:59:59.999Z`)
+        .limit(1);
+
+      if (!error && data && data.length > 0) {
+        setHasAttendanceToday(true);
+      }
+    } catch (error) {
+      console.log('Error checking attendance:', error);
+    }
+  };
+
+  const handleShiftChange = async (shiftId: string) => {
+    if (hasAttendanceToday) {
+      toast({
+        title: "Cannot Change Shift",
+        description: "You cannot change shift after attendance has been recorded for today.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const shiftData = {
+        user_id: userId,
+        shift_id: shiftId,
+        tanggal: today,
+        updated_at: new Date().toISOString()
+      };
+
+      let error;
+      if (currentUserShift) {
+        // Update existing shift
+        ({ error } = await supabase
+          .from('user_shifts')
+          .update(shiftData)
+          .eq('id', currentUserShift.id));
+      } else {
+        // Create new shift assignment
+        ({ error } = await supabase
+          .from('user_shifts')
+          .insert({
+            ...shiftData,
+            created_at: new Date().toISOString()
+          }));
+      }
+
+      if (error) throw error;
+
+      setSelectedShift(shiftId);
+      const selectedShiftData = shifts.find(s => s.id === shiftId);
+      onShiftChange?.(selectedShiftData || null);
+
+      toast({
+        title: t('general.success'),
+        description: `Shift changed to ${selectedShiftData?.nama_shift} successfully!`,
+      });
+
+      // Refresh user shift data
+      await fetchUserShift();
+    } catch (error: any) {
+      toast({
+        title: t('general.error'),
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getShiftStatus = (shift: Shift) => {
+    const now = new Date();
+    const currentTime = format(now, 'HH:mm');
+    const shiftStart = shift.jam_masuk;
+    const shiftEnd = shift.jam_keluar;
+
+    if (currentTime >= shiftStart && currentTime <= shiftEnd) {
+      return { status: 'active', label: 'Active Now', color: 'bg-green-100 text-green-800' };
+    } else if (currentTime < shiftStart) {
+      return { status: 'upcoming', label: 'Upcoming', color: 'bg-blue-100 text-blue-800' };
+    } else {
+      return { status: 'ended', label: 'Ended', color: 'bg-gray-100 text-gray-800' };
+    }
+  };
+
+  const getCurrentShift = () => {
+    return shifts.find(s => s.id === selectedShift);
+  };
+
+  const formatShiftTime = (shift: Shift) => {
+    return `${shift.jam_masuk} - ${shift.jam_keluar}`;
+  };
+
+  const calculateShiftDuration = (shift: Shift) => {
+    const start = new Date(`2000-01-01 ${shift.jam_masuk}`);
+    const end = new Date(`2000-01-01 ${shift.jam_keluar}`);
+    const duration = Math.abs(end.getTime() - start.getTime());
+    const hours = Math.floor(duration / (1000 * 60 * 60));
+    return `${hours} hours`;
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="animate-pulse space-y-4">
+            <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+            <div className="h-10 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const currentShift = getCurrentShift();
+  const shiftStatus = currentShift ? getShiftStatus(currentShift) : null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Clock className="h-5 w-5" />
+          Today's Shift Selection
+        </CardTitle>
+        <CardDescription>
+          Choose your working shift for {format(new Date(), 'dd MMMM yyyy')} ({dayType})
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {hasAttendanceToday && (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Shift cannot be changed after attendance has been recorded for today.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Shift Selector */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Select Shift</label>
+          <Select 
+            value={selectedShift} 
+            onValueChange={handleShiftChange}
+            disabled={disabled || saving || hasAttendanceToday}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choose your shift for today" />
+            </SelectTrigger>
+            <SelectContent>
+              {shifts.map((shift) => {
+                const status = getShiftStatus(shift);
+                return (
+                  <SelectItem key={shift.id} value={shift.id}>
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex flex-col">
+                        <span className="font-medium">{shift.nama_shift}</span>
+                        <span className="text-xs text-gray-500">
+                          {formatShiftTime(shift)} • {calculateShiftDuration(shift)}
+                        </span>
+                      </div>
+                      <Badge className={`ml-2 text-xs ${status.color}`}>
+                        {status.label}
+                      </Badge>
+                    </div>
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Current Shift Info */}
+        {currentShift && (
+          <div className="p-4 bg-gray-50 rounded-lg space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="font-medium flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                Current Shift: {currentShift.nama_shift}
+              </h4>
+              {shiftStatus && (
+                <Badge className={shiftStatus.color}>
+                  {shiftStatus.label}
+                </Badge>
+              )}
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-gray-600">Start Time:</span>
+                <p className="font-medium">{currentShift.jam_masuk}</p>
+              </div>
+              <div>
+                <span className="text-gray-600">End Time:</span>
+                <p className="font-medium">{currentShift.jam_keluar}</p>
+              </div>
+              <div>
+                <span className="text-gray-600">Duration:</span>
+                <p className="font-medium">{calculateShiftDuration(currentShift)}</p>
+              </div>
+              <div>
+                <span className="text-gray-600">Day Type:</span>
+                <p className="font-medium capitalize">{currentShift.jenis_hari}</p>
+              </div>
+            </div>
+
+            {/* Shift Timeline */}
+            <div className="space-y-2">
+              <span className="text-sm text-gray-600">Today's Timeline:</span>
+              <div className="flex items-center gap-2 text-xs">
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span>Start: {currentShift.jam_masuk}</span>
+                </div>
+                <div className="flex-1 h-px bg-gray-300"></div>
+                <div className="flex items-center gap-1">
+                  <span>End: {currentShift.jam_keluar}</span>
+                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Available Shifts Info */}
+        {shifts.length > 1 && (
+          <div className="space-y-2">
+            <h5 className="text-sm font-medium text-gray-700">Available Shifts for {dayType}:</h5>
+            <div className="grid gap-2">
+              {shifts.map((shift) => {
+                const status = getShiftStatus(shift);
+                const isSelected = shift.id === selectedShift;
+                
+                return (
+                  <div 
+                    key={shift.id} 
+                    className={`p-3 rounded-lg border text-sm ${
+                      isSelected 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-200 bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-medium">{shift.nama_shift}</span>
+                        <span className="text-gray-500 ml-2">
+                          {formatShiftTime(shift)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className={`text-xs ${status.color}`}>
+                          {status.label}
+                        </Badge>
+                        {isSelected && (
+                          <CheckCircle className="h-4 w-4 text-blue-600" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Refresh Button */}
+        <Button 
+          variant="outline" 
+          onClick={() => {
+            fetchShifts();
+            fetchUserShift();
+          }}
+          disabled={saving}
+          className="w-full"
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${saving ? 'animate-spin' : ''}`} />
+          Refresh Shifts
+        </Button>
+      </CardContent>
+    </Card>
+  );
+};
