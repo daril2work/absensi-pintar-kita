@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,10 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Plus, Edit, Trash2, MapPin } from 'lucide-react';
 
 export const LocationManagement = () => {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [locations, setLocations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -68,14 +69,14 @@ export const LocationManagement = () => {
 
       if (error) {
         toast({
-          title: "Error",
+          title: t('general.error'),
           description: error.message,
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Success",
-          description: `Location ${editingLocation ? 'updated' : 'created'} successfully!`,
+          title: t('general.success'),
+          description: editingLocation ? t('admin.locationUpdated') : t('admin.locationCreated'),
         });
         setFormData({ nama_lokasi: '', latitude: '', longitude: '', radius_meter: '100', aktif: true });
         setEditingLocation(null);
@@ -84,7 +85,7 @@ export const LocationManagement = () => {
       }
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: t('general.error'),
         description: error.message,
         variant: "destructive",
       });
@@ -104,7 +105,7 @@ export const LocationManagement = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this location?')) return;
+    if (!confirm(t('admin.deleteLocationConfirm'))) return;
 
     const { error } = await supabase
       .from('lokasi_valid')
@@ -113,14 +114,14 @@ export const LocationManagement = () => {
 
     if (error) {
       toast({
-        title: "Error",
+        title: t('general.error'),
         description: error.message,
         variant: "destructive",
       });
     } else {
       toast({
-        title: "Success",
-        description: "Location deleted successfully!",
+        title: t('general.success'),
+        description: t('admin.locationDeleted'),
       });
       fetchLocations();
     }
@@ -138,10 +139,10 @@ export const LocationManagement = () => {
           <div>
             <CardTitle className="flex items-center gap-2">
               <MapPin className="h-5 w-5" />
-              Location Management
+              {t('admin.locationManagement')}
             </CardTitle>
             <CardDescription>
-              Manage valid attendance locations with GPS coordinates
+              {t('admin.manageValidLocations')}
             </CardDescription>
           </div>
           <Dialog open={open} onOpenChange={(value) => {
@@ -151,33 +152,33 @@ export const LocationManagement = () => {
             <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Location
+                {t('admin.addLocation')}
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
                 <DialogTitle>
-                  {editingLocation ? 'Edit Location' : 'Add New Location'}
+                  {editingLocation ? t('admin.editLocation') : t('admin.addNewLocation')}
                 </DialogTitle>
                 <DialogDescription>
-                  Set up a valid attendance location with GPS coordinates and radius.
+                  {t('admin.setupValidLocation')}
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit}>
                 <div className="grid gap-4 py-4">
                   <div className="space-y-2">
-                    <Label htmlFor="nama_lokasi">Location Name</Label>
+                    <Label htmlFor="nama_lokasi">{t('admin.locationName')}</Label>
                     <Input
                       id="nama_lokasi"
                       value={formData.nama_lokasi}
                       onChange={(e) => setFormData({ ...formData, nama_lokasi: e.target.value })}
-                      placeholder="e.g., Main Office"
+                      placeholder={t('admin.locationNamePlaceholder')}
                       required
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="latitude">Latitude</Label>
+                      <Label htmlFor="latitude">{t('admin.latitude')}</Label>
                       <Input
                         id="latitude"
                         type="number"
@@ -189,7 +190,7 @@ export const LocationManagement = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="longitude">Longitude</Label>
+                      <Label htmlFor="longitude">{t('admin.longitude')}</Label>
                       <Input
                         id="longitude"
                         type="number"
@@ -202,7 +203,7 @@ export const LocationManagement = () => {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="radius_meter">Radius (meters)</Label>
+                    <Label htmlFor="radius_meter">{t('admin.radiusMeters')}</Label>
                     <Input
                       id="radius_meter"
                       type="number"
@@ -218,15 +219,15 @@ export const LocationManagement = () => {
                       checked={formData.aktif}
                       onCheckedChange={(checked) => setFormData({ ...formData, aktif: checked })}
                     />
-                    <Label htmlFor="aktif">Active</Label>
+                    <Label htmlFor="aktif">{t('admin.active')}</Label>
                   </div>
                 </div>
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                    Cancel
+                    {t('general.cancel')}
                   </Button>
                   <Button type="submit">
-                    {editingLocation ? 'Update' : 'Create'}
+                    {editingLocation ? t('general.update') : t('general.create')}
                   </Button>
                 </DialogFooter>
               </form>
@@ -246,11 +247,11 @@ export const LocationManagement = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Coordinates</TableHead>
-                  <TableHead>Radius</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead>{t('general.name')}</TableHead>
+                  <TableHead>{t('admin.coordinates')}</TableHead>
+                  <TableHead>{t('dashboard.radius')}</TableHead>
+                  <TableHead>{t('admin.status')}</TableHead>
+                  <TableHead>{t('general.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -267,7 +268,7 @@ export const LocationManagement = () => {
                           ? 'bg-green-100 text-green-800' 
                           : 'bg-gray-100 text-gray-800'
                       }`}>
-                        {location.aktif ? 'Active' : 'Inactive'}
+                        {location.aktif ? t('admin.active') : t('admin.inactive')}
                       </span>
                     </TableCell>
                     <TableCell>

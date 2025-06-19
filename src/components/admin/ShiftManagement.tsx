@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,10 +7,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Plus, Edit, Trash2, Clock } from 'lucide-react';
 
 export const ShiftManagement = () => {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [shifts, setShifts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -57,14 +58,14 @@ export const ShiftManagement = () => {
 
       if (error) {
         toast({
-          title: "Error",
+          title: t('general.error'),
           description: error.message,
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Success",
-          description: `Shift ${editingShift ? 'updated' : 'created'} successfully!`,
+          title: t('general.success'),
+          description: editingShift ? t('admin.shiftUpdated') : t('admin.shiftCreated'),
         });
         setFormData({ nama_shift: '', jam_masuk: '', jam_keluar: '' });
         setEditingShift(null);
@@ -73,7 +74,7 @@ export const ShiftManagement = () => {
       }
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: t('general.error'),
         description: error.message,
         variant: "destructive",
       });
@@ -91,7 +92,7 @@ export const ShiftManagement = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this shift?')) return;
+    if (!confirm(t('admin.deleteShiftConfirm'))) return;
 
     const { error } = await supabase
       .from('shift')
@@ -100,14 +101,14 @@ export const ShiftManagement = () => {
 
     if (error) {
       toast({
-        title: "Error",
+        title: t('general.error'),
         description: error.message,
         variant: "destructive",
       });
     } else {
       toast({
-        title: "Success",
-        description: "Shift deleted successfully!",
+        title: t('general.success'),
+        description: t('admin.shiftDeleted'),
       });
       fetchShifts();
     }
@@ -125,10 +126,10 @@ export const ShiftManagement = () => {
           <div>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
-              Shift Management
+              {t('admin.shiftManagement')}
             </CardTitle>
             <CardDescription>
-              Manage work shifts and their time schedules
+              {t('admin.manageWorkShifts')}
             </CardDescription>
           </div>
           <Dialog open={open} onOpenChange={(value) => {
@@ -138,33 +139,33 @@ export const ShiftManagement = () => {
             <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Shift
+                {t('admin.addShift')}
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
                 <DialogTitle>
-                  {editingShift ? 'Edit Shift' : 'Add New Shift'}
+                  {editingShift ? t('admin.editShift') : t('admin.addNewShift')}
                 </DialogTitle>
                 <DialogDescription>
-                  Set up work shift times for attendance tracking.
+                  {t('admin.setupWorkShift')}
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit}>
                 <div className="grid gap-4 py-4">
                   <div className="space-y-2">
-                    <Label htmlFor="nama_shift">Shift Name</Label>
+                    <Label htmlFor="nama_shift">{t('admin.shiftName')}</Label>
                     <Input
                       id="nama_shift"
                       value={formData.nama_shift}
                       onChange={(e) => setFormData({ ...formData, nama_shift: e.target.value })}
-                      placeholder="e.g., Morning Shift"
+                      placeholder={t('admin.shiftNamePlaceholder')}
                       required
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="jam_masuk">Start Time</Label>
+                      <Label htmlFor="jam_masuk">{t('admin.startTime')}</Label>
                       <Input
                         id="jam_masuk"
                         type="time"
@@ -174,7 +175,7 @@ export const ShiftManagement = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="jam_keluar">End Time</Label>
+                      <Label htmlFor="jam_keluar">{t('admin.endTime')}</Label>
                       <Input
                         id="jam_keluar"
                         type="time"
@@ -187,10 +188,10 @@ export const ShiftManagement = () => {
                 </div>
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                    Cancel
+                    {t('general.cancel')}
                   </Button>
                   <Button type="submit">
-                    {editingShift ? 'Update' : 'Create'}
+                    {editingShift ? t('general.update') : t('general.create')}
                   </Button>
                 </DialogFooter>
               </form>
@@ -210,11 +211,11 @@ export const ShiftManagement = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Shift Name</TableHead>
-                  <TableHead>Start Time</TableHead>
-                  <TableHead>End Time</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead>{t('admin.shiftName')}</TableHead>
+                  <TableHead>{t('admin.startTime')}</TableHead>
+                  <TableHead>{t('admin.endTime')}</TableHead>
+                  <TableHead>{t('admin.duration')}</TableHead>
+                  <TableHead>{t('general.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -229,7 +230,7 @@ export const ShiftManagement = () => {
                       <TableCell className="font-medium">{shift.nama_shift}</TableCell>
                       <TableCell>{shift.jam_masuk}</TableCell>
                       <TableCell>{shift.jam_keluar}</TableCell>
-                      <TableCell>{hours} hours</TableCell>
+                      <TableCell>{hours} {t('admin.hours')}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Button

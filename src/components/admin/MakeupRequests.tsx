@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,12 +9,14 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Check, X, Eye, Settings } from 'lucide-react';
 import { format } from 'date-fns';
 
 export const MakeupRequests = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
@@ -78,8 +79,8 @@ export const MakeupRequests = () => {
       }
 
       toast({
-        title: "Success",
-        description: "Make-up request approved and attendance record created!",
+        title: t('general.success'),
+        description: t('admin.makeupRequestApproved'),
       });
       
       setOpen(false);
@@ -87,7 +88,7 @@ export const MakeupRequests = () => {
       fetchMakeupRequests();
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: t('general.error'),
         description: error.message,
         variant: "destructive",
       });
@@ -113,8 +114,8 @@ export const MakeupRequests = () => {
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: "Make-up request rejected.",
+        title: t('general.success'),
+        description: t('admin.makeupRequestRejected'),
       });
       
       setOpen(false);
@@ -122,7 +123,7 @@ export const MakeupRequests = () => {
       fetchMakeupRequests();
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: t('general.error'),
         description: error.message,
         variant: "destructive",
       });
@@ -138,7 +139,7 @@ export const MakeupRequests = () => {
       'rejected': 'destructive'
     };
     
-    return <Badge variant={variants[status] || 'default'}>{status.toUpperCase()}</Badge>;
+    return <Badge variant={variants[status] || 'default'}>{t(`status.${status}`)}</Badge>;
   };
 
   const openRequestDialog = (request: any) => {
@@ -152,10 +153,10 @@ export const MakeupRequests = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Settings className="h-5 w-5" />
-          Make-up Requests
+          {t('admin.makeupRequestsTitle')}
         </CardTitle>
         <CardDescription>
-          Review and process employee make-up attendance requests
+          {t('admin.reviewProcessRequests')}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -170,12 +171,12 @@ export const MakeupRequests = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Employee</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Reason</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Submitted</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead>{t('admin.employee')}</TableHead>
+                  <TableHead>{t('admin.date')}</TableHead>
+                  <TableHead>{t('admin.reason')}</TableHead>
+                  <TableHead>{t('admin.status')}</TableHead>
+                  <TableHead>{t('admin.submitted')}</TableHead>
+                  <TableHead>{t('general.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -217,9 +218,9 @@ export const MakeupRequests = () => {
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
-              <DialogTitle>Review Make-up Request</DialogTitle>
+              <DialogTitle>{t('admin.reviewMakeupRequest')}</DialogTitle>
               <DialogDescription>
-                Review the details and approve or reject this make-up request.
+                {t('admin.reviewDetails')}
               </DialogDescription>
             </DialogHeader>
             
@@ -227,11 +228,11 @@ export const MakeupRequests = () => {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-sm font-medium">Employee</Label>
+                    <Label className="text-sm font-medium">{t('admin.employee')}</Label>
                     <p className="text-sm text-gray-600">{selectedRequest.profiles?.name}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium">Date</Label>
+                    <Label className="text-sm font-medium">{t('admin.date')}</Label>
                     <p className="text-sm text-gray-600">
                       {format(new Date(selectedRequest.tanggal_absen), 'dd MMMM yyyy')}
                     </p>
@@ -239,31 +240,31 @@ export const MakeupRequests = () => {
                 </div>
                 
                 <div>
-                  <Label className="text-sm font-medium">Reason</Label>
+                  <Label className="text-sm font-medium">{t('admin.reason')}</Label>
                   <p className="text-sm text-gray-600 mt-1">{selectedRequest.alasan}</p>
                 </div>
                 
                 {selectedRequest.bukti_url && (
                   <div>
-                    <Label className="text-sm font-medium">Supporting Document</Label>
+                    <Label className="text-sm font-medium">{t('admin.supportingDocument')}</Label>
                     <a 
                       href={selectedRequest.bukti_url} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="text-sm text-blue-600 hover:underline block"
                     >
-                      View Document
+                      {t('admin.viewDocument')}
                     </a>
                   </div>
                 )}
                 
                 <div>
-                  <Label htmlFor="admin_notes">Admin Notes</Label>
+                  <Label htmlFor="admin_notes">{t('admin.adminNotes')}</Label>
                   <Textarea
                     id="admin_notes"
                     value={adminNotes}
                     onChange={(e) => setAdminNotes(e.target.value)}
-                    placeholder="Add notes about your decision..."
+                    placeholder={t('admin.addNotesDecision')}
                     className="mt-1"
                   />
                 </div>
@@ -276,14 +277,14 @@ export const MakeupRequests = () => {
                       disabled={processingId === selectedRequest.id}
                     >
                       <X className="h-4 w-4 mr-2" />
-                      Reject
+                      {t('admin.reject')}
                     </Button>
                     <Button
                       onClick={() => handleApprove(selectedRequest.id)}
                       disabled={processingId === selectedRequest.id}
                     >
                       <Check className="h-4 w-4 mr-2" />
-                      Approve
+                      {t('admin.approve')}
                     </Button>
                   </DialogFooter>
                 )}

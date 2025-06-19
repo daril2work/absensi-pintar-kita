@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Download, FileText, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 import { Database } from '@/integrations/supabase/types';
@@ -17,6 +18,7 @@ type AttendanceMethod = Database['public']['Enums']['attendance_method'];
 
 export const AttendanceReports = () => {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [attendance, setAttendance] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,13 +85,13 @@ export const AttendanceReports = () => {
   };
 
   const exportToCSV = () => {
-    const headers = ['Name', 'Date', 'Time', 'Status', 'Method', 'Location', 'Reason'];
+    const headers = [t('general.name'), t('admin.date'), t('general.time'), t('attendance.status'), t('general.method'), t('general.location'), t('admin.reason')];
     const csvData = attendance.map(record => [
       record.profiles?.name || 'Unknown',
       format(new Date(record.waktu), 'yyyy-MM-dd'),
       format(new Date(record.waktu), 'HH:mm:ss'),
-      record.status,
-      record.metode,
+      t(`status.${record.status}`),
+      record.metode === 'absen' ? t('admin.regular') : t('admin.makeup'),
       record.lokasi || '',
       record.alasan || ''
     ]);
@@ -108,8 +110,8 @@ export const AttendanceReports = () => {
     document.body.removeChild(link);
 
     toast({
-      title: "Success",
-      description: "Report exported successfully!",
+      title: t('general.success'),
+      description: t('admin.exportSuccess'),
     });
   };
 
@@ -120,13 +122,13 @@ export const AttendanceReports = () => {
       'MAKE_UP': 'outline'
     };
     
-    return <Badge variant={variants[status] || 'default'}>{status}</Badge>;
+    return <Badge variant={variants[status] || 'default'}>{t(`status.${status}`)}</Badge>;
   };
 
   const getMethodBadge = (method: string) => {
     return (
       <Badge variant={method === 'absen' ? 'default' : 'outline'}>
-        {method === 'absen' ? 'Regular' : 'Make-up'}
+        {method === 'absen' ? t('admin.regular') : t('admin.makeup')}
       </Badge>
     );
   };
@@ -148,16 +150,16 @@ export const AttendanceReports = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="h-5 w-5" />
-            Filter & Export
+            {t('admin.filterExport')}
           </CardTitle>
           <CardDescription>
-            Filter attendance data and export reports
+            {t('admin.filterAttendanceData')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="startDate">Start Date</Label>
+              <Label htmlFor="startDate">{t('admin.startDate')}</Label>
               <Input
                 id="startDate"
                 type="date"
@@ -167,7 +169,7 @@ export const AttendanceReports = () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="endDate">End Date</Label>
+              <Label htmlFor="endDate">{t('admin.endDate')}</Label>
               <Input
                 id="endDate"
                 type="date"
@@ -177,13 +179,13 @@ export const AttendanceReports = () => {
             </div>
             
             <div className="space-y-2">
-              <Label>Employee</Label>
+              <Label>{t('admin.employee')}</Label>
               <Select value={filters.userId} onValueChange={(value) => setFilters({ ...filters, userId: value })}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All employees" />
+                  <SelectValue placeholder={t('admin.allEmployees')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All employees</SelectItem>
+                  <SelectItem value="all">{t('admin.allEmployees')}</SelectItem>
                   {users.map((user) => (
                     <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
                   ))}
@@ -192,30 +194,30 @@ export const AttendanceReports = () => {
             </div>
             
             <div className="space-y-2">
-              <Label>Status</Label>
+              <Label>{t('attendance.status')}</Label>
               <Select value={filters.status} onValueChange={(value: AttendanceStatus | 'all') => setFilters({ ...filters, status: value })}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All statuses" />
+                  <SelectValue placeholder={t('admin.allStatuses')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="HADIR">HADIR</SelectItem>
-                  <SelectItem value="TERLAMBAT">TERLAMBAT</SelectItem>
-                  <SelectItem value="MAKE_UP">MAKE_UP</SelectItem>
+                  <SelectItem value="all">{t('admin.allStatuses')}</SelectItem>
+                  <SelectItem value="HADIR">{t('status.HADIR')}</SelectItem>
+                  <SelectItem value="TERLAMBAT">{t('status.TERLAMBAT')}</SelectItem>
+                  <SelectItem value="MAKE_UP">{t('status.MAKE_UP')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
             <div className="space-y-2">
-              <Label>Method</Label>
+              <Label>{t('general.method')}</Label>
               <Select value={filters.method} onValueChange={(value: AttendanceMethod | 'all') => setFilters({ ...filters, method: value })}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All methods" />
+                  <SelectValue placeholder={t('admin.allMethods')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All methods</SelectItem>
-                  <SelectItem value="absen">Regular</SelectItem>
-                  <SelectItem value="make-up">Make-up</SelectItem>
+                  <SelectItem value="all">{t('admin.allMethods')}</SelectItem>
+                  <SelectItem value="absen">{t('admin.regular')}</SelectItem>
+                  <SelectItem value="make-up">{t('admin.makeup')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -224,11 +226,11 @@ export const AttendanceReports = () => {
               <Label>&nbsp;</Label>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={resetFilters} className="flex-1">
-                  Reset
+                  {t('admin.reset')}
                 </Button>
                 <Button onClick={exportToCSV} className="flex-1">
                   <Download className="h-4 w-4 mr-2" />
-                  CSV
+                  {t('admin.csv')}
                 </Button>
               </div>
             </div>
@@ -243,10 +245,10 @@ export const AttendanceReports = () => {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
-                Attendance Report
+                {t('admin.attendanceReport')}
               </CardTitle>
               <CardDescription>
-                {attendance.length} records found
+                {attendance.length} {t('admin.recordsFound')}
               </CardDescription>
             </div>
           </div>
@@ -263,13 +265,13 @@ export const AttendanceReports = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Method</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Reason</TableHead>
+                    <TableHead>{t('admin.employee')}</TableHead>
+                    <TableHead>{t('admin.date')}</TableHead>
+                    <TableHead>{t('general.time')}</TableHead>
+                    <TableHead>{t('attendance.status')}</TableHead>
+                    <TableHead>{t('general.method')}</TableHead>
+                    <TableHead>{t('general.location')}</TableHead>
+                    <TableHead>{t('admin.reason')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

@@ -1,18 +1,20 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { LogOut, Users, MapPin, Clock, FileText, Settings } from 'lucide-react';
 import { LocationManagement } from '@/components/admin/LocationManagement';
 import { ShiftManagement } from '@/components/admin/ShiftManagement';
 import { MakeupRequests } from '@/components/admin/MakeupRequests';
 import { AttendanceReports } from '@/components/admin/AttendanceReports';
 import { UserManagement } from '@/components/admin/UserManagement';
+import { LanguageToggle } from '@/components/LanguageToggle';
 
 export default function Admin() {
   const { profile, signOut } = useAuth();
+  const { t } = useLanguage();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -21,13 +23,16 @@ export default function Admin() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-              <p className="text-gray-600">Welcome back, {profile?.name}</p>
+              <h1 className="text-2xl font-bold text-gray-900">{t('admin.dashboard')}</h1>
+              <p className="text-gray-600">{t('admin.welcomeBack')}, {profile?.name}</p>
             </div>
-            <Button variant="outline" onClick={signOut} className="flex items-center gap-2">
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </Button>
+            <div className="flex items-center gap-4">
+              <LanguageToggle />
+              <Button variant="outline" onClick={signOut} className="flex items-center gap-2">
+                <LogOut className="h-4 w-4" />
+                {t('auth.signOut')}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -37,23 +42,23 @@ export default function Admin() {
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="reports" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
-              Reports
+              {t('admin.reports')}
             </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
-              Users
+              {t('admin.users')}
             </TabsTrigger>
             <TabsTrigger value="locations" className="flex items-center gap-2">
               <MapPin className="h-4 w-4" />
-              Locations
+              {t('admin.locations')}
             </TabsTrigger>
             <TabsTrigger value="shifts" className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
-              Shifts
+              {t('admin.shifts')}
             </TabsTrigger>
             <TabsTrigger value="makeup" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
-              Make-up Requests
+              {t('admin.makeupRequests')}
             </TabsTrigger>
           </TabsList>
 
