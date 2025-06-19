@@ -3,8 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -20,7 +23,9 @@ export const ShiftManagement = () => {
   const [formData, setFormData] = useState({
     nama_shift: '',
     jam_masuk: '',
-    jam_keluar: ''
+    jam_keluar: '',
+    jenis_hari: 'weekday',
+    aktif: true
   });
 
   useEffect(() => {
@@ -32,7 +37,7 @@ export const ShiftManagement = () => {
     const { data, error } = await supabase
       .from('shift')
       .select('*')
-      .order('jam_masuk');
+      .order('jenis_hari, jam_masuk');
 
     if (!error && data) {
       setShifts(data);
@@ -67,7 +72,7 @@ export const ShiftManagement = () => {
           title: t('general.success'),
           description: editingShift ? t('admin.shiftUpdated') : t('admin.shiftCreated'),
         });
-        setFormData({ nama_shift: '', jam_masuk: '', jam_keluar: '' });
+        setFormData({ nama_shift: '', jam_masuk: '', jam_keluar: '', jenis_hari: 'weekday', aktif: true });
         setEditingShift(null);
         setOpen(false);
         fetchShifts();
@@ -86,7 +91,9 @@ export const ShiftManagement = () => {
     setFormData({
       nama_shift: shift.nama_shift,
       jam_masuk: shift.jam_masuk,
-      jam_keluar: shift.jam_keluar
+      jam_keluar: shift.jam_keluar,
+      jenis_hari: shift.jenis_hari || 'weekday',
+      aktif: shift.aktif !== undefined ? shift.aktif : true
     });
     setOpen(true);
   };
@@ -115,8 +122,19 @@ export const ShiftManagement = () => {
   };
 
   const resetForm = () => {
-    setFormData({ nama_shift: '', jam_masuk: '', jam_keluar: '' });
+    setFormData({ nama_shift: '', jam_masuk: '', jam_keluar: '', jenis_hari: 'weekday', aktif: true });
     setEditingShift(null);
+  };
+
+  const getDayTypeBadge = (dayType: string) => {
+    const variants: Record<string, any> = {
+      'weekday': 'default',
+      'weekend': 'secondary',
+      'holiday': 'outline',
+      'all': 'destructive'
+    };
+    
+    return <Badge variant={variants[dayType] || 'default'}>{t(`admin.dayType.${dayType}`)}</Badge>;
   };
 
   return (
@@ -163,6 +181,22 @@ export const ShiftManagement = () => {
                       required
                     />
                   </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="jenis_hari">{t('admin.dayType')}</Label>
+                    <Select value={formData.jenis_hari} onValueChange={(value) => setFormData({ ...formData, jenis_hari: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('admin.selectDayType')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="weekday">{t('admin.dayType.weekday')}</SelectItem>
+                        <SelectItem value="weekend">{t('admin.dayType.weekend')}</SelectItem>
+                        <SelectItem value="holiday">{t('admin.dayType.holiday')}</SelectItem>
+                        <SelectItem value="all">{t('admin.dayType.all')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="jam_masuk">{t('admin.startTime')}</Label>
@@ -184,6 +218,15 @@ export const ShiftManagement = () => {
                         required
                       />
                     </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="aktif"
+                      checked={formData.aktif}
+                      onCheckedChange={(checked) => setFormData({ ...formData, aktif: checked })}
+                    />
+                    <Label htmlFor="aktif">{t('admin.active')}</Label>
                   </div>
                 </div>
                 <DialogFooter>
@@ -212,9 +255,11 @@ export const ShiftManagement = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t('admin.shiftName')}</TableHead>
+                  <TableHead>{t('admin.dayType')}</TableHead>
                   <TableHead>{t('admin.startTime')}</TableHead>
                   <TableHead>{t('admin.endTime')}</TableHead>
                   <TableHead>{t('admin.duration')}</TableHead>
+                  <TableHead>{t('admin.status')}</TableHead>
                   <TableHead>{t('general.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -228,9 +273,21 @@ export const ShiftManagement = () => {
                   return (
                     <TableRow key={shift.id}>
                       <TableCell className="font-medium">{shift.nama_shift}</TableCell>
+                      <TableCell>
+                        {getDayTypeBadge(shift.jenis_hari || 'weekday')}
+                      </TableCell>
                       <TableCell>{shift.jam_masuk}</TableCell>
                       <TableCell>{shift.jam_keluar}</TableCell>
                       <TableCell>{hours} {t('admin.hours')}</TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          shift.aktif !== false
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {shift.aktif !== false ? t('admin.active') : t('admin.inactive')}
+                        </span>
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Button
