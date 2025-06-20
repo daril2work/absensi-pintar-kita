@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -17,15 +18,7 @@ interface Shift {
   jam_keluar: string;
   jenis_hari: 'weekday' | 'weekend' | 'holiday' | 'all';
   aktif: boolean;
-}
-
-interface UserShift {
-  id?: string;
-  user_id: string;
-  shift_id: string;
-  tanggal: string;
   created_at?: string;
-  updated_at?: string;
 }
 
 interface ShiftSelectorProps {
@@ -39,9 +32,7 @@ export const ShiftSelector = ({ userId, onShiftChange, disabled = false }: Shift
   const { t } = useLanguage();
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [selectedShift, setSelectedShift] = useState<string>('');
-  const [currentUserShift, setCurrentUserShift] = useState<UserShift | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [hasAttendanceToday, setHasAttendanceToday] = useState(false);
 
   const today = format(new Date(), 'yyyy-MM-dd');
@@ -50,7 +41,6 @@ export const ShiftSelector = ({ userId, onShiftChange, disabled = false }: Shift
 
   useEffect(() => {
     fetchShifts();
-    fetchUserShift();
     checkTodayAttendance();
   }, [userId]);
 
@@ -65,65 +55,20 @@ export const ShiftSelector = ({ userId, onShiftChange, disabled = false }: Shift
 
       if (error) throw error;
       setShifts(data || []);
+      
+      // Set default shift to first available
+      if (data && data.length > 0 && !selectedShift) {
+        setSelectedShift(data[0].id);
+        onShiftChange?.(data[0]);
+      }
     } catch (error: any) {
       toast({
         title: t('general.error'),
         description: error.message,
         variant: "destructive",
       });
-    }
-  };
-
-  const fetchUserShift = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('user_shifts')
-        .select(`
-          *,
-          shift:shift_id (*)
-        `)
-        .eq('user_id', userId)
-        .eq('tanggal', today)
-        .single();
-
-      if (!error && data) {
-        setCurrentUserShift(data);
-        setSelectedShift(data.shift_id);
-        onShiftChange?.(data.shift);
-      } else {
-        // No shift assigned for today, try to get default shift
-        await fetchDefaultShift();
-      }
-    } catch (error: any) {
-      console.log('No user shift found for today');
-      await fetchDefaultShift();
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchDefaultShift = async () => {
-    try {
-      // Get user's most recent shift or first available shift
-      const { data: recentShift } = await supabase
-        .from('user_shifts')
-        .select('shift_id')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (recentShift) {
-        setSelectedShift(recentShift.shift_id);
-      } else if (shifts.length > 0) {
-        // Default to first available shift
-        setSelectedShift(shifts[0].id);
-      }
-    } catch (error) {
-      // No previous shifts found
-      if (shifts.length > 0) {
-        setSelectedShift(shifts[0].id);
-      }
     }
   };
 
@@ -155,54 +100,14 @@ export const ShiftSelector = ({ userId, onShiftChange, disabled = false }: Shift
       return;
     }
 
-    setSaving(true);
-    try {
-      const shiftData = {
-        user_id: userId,
-        shift_id: shiftId,
-        tanggal: today,
-        updated_at: new Date().toISOString()
-      };
+    setSelectedShift(shiftId);
+    const selectedShiftData = shifts.find(s => s.id === shiftId);
+    onShiftChange?.(selectedShiftData || null);
 
-      let error;
-      if (currentUserShift) {
-        // Update existing shift
-        ({ error } = await supabase
-          .from('user_shifts')
-          .update(shiftData)
-          .eq('id', currentUserShift.id));
-      } else {
-        // Create new shift assignment
-        ({ error } = await supabase
-          .from('user_shifts')
-          .insert({
-            ...shiftData,
-            created_at: new Date().toISOString()
-          }));
-      }
-
-      if (error) throw error;
-
-      setSelectedShift(shiftId);
-      const selectedShiftData = shifts.find(s => s.id === shiftId);
-      onShiftChange?.(selectedShiftData || null);
-
-      toast({
-        title: t('general.success'),
-        description: `${t('shift.shiftChangedSuccess')} ${selectedShiftData?.nama_shift}!`,
-      });
-
-      // Refresh user shift data
-      await fetchUserShift();
-    } catch (error: any) {
-      toast({
-        title: t('general.error'),
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
-    }
+    toast({
+      title: t('general.success'),
+      description: `${t('shift.shiftChangedSuccess')} ${selectedShiftData?.nama_shift}!`,
+    });
   };
 
   const getShiftStatus = (shift: Shift) => {
@@ -280,7 +185,7 @@ export const ShiftSelector = ({ userId, onShiftChange, disabled = false }: Shift
           <Select 
             value={selectedShift || undefined} 
             onValueChange={handleShiftChange}
-            disabled={disabled || saving || hasAttendanceToday}
+            disabled={disabled || hasAttendanceToday}
           >
             <SelectTrigger>
               <SelectValue placeholder={t('shift.chooseShiftToday')} />
@@ -406,14 +311,11 @@ export const ShiftSelector = ({ userId, onShiftChange, disabled = false }: Shift
         {/* Refresh Button */}
         <Button 
           variant="outline" 
-          onClick={() => {
-            fetchShifts();
-            fetchUserShift();
-          }}
-          disabled={saving}
+          onClick={fetchShifts}
+          disabled={loading}
           className="w-full"
         >
-          <RefreshCw className={`h-4 w-4 mr-2 ${saving ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
           {t('shift.refreshShifts')}
         </Button>
       </CardContent>

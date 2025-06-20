@@ -170,24 +170,30 @@ export type Database = {
       }
       shift: {
         Row: {
+          aktif: boolean
           created_at: string | null
           id: string
           jam_keluar: string
           jam_masuk: string
+          jenis_hari: string
           nama_shift: string
         }
         Insert: {
+          aktif?: boolean
           created_at?: string | null
           id?: string
           jam_keluar: string
           jam_masuk: string
+          jenis_hari?: string
           nama_shift: string
         }
         Update: {
+          aktif?: boolean
           created_at?: string | null
           id?: string
           jam_keluar?: string
           jam_masuk?: string
+          jenis_hari?: string
           nama_shift?: string
         }
         Relationships: []
