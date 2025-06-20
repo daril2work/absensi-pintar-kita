@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -212,7 +213,7 @@ export default function Dashboard() {
         user_id: user?.id,
         waktu: now.toISOString(),
         status,
-        metode: 'absen',
+        metode: 'absen' as const, // Fixed type casting
         lokasi: `${location.lat},${location.lng}`,
         shift_id: selectedShift.id,
         photo_url: photoUrl,
@@ -269,23 +270,30 @@ export default function Dashboard() {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, any> = {
-      'HADIR': 'default',
-      'TERLAMBAT': 'secondary', 
-      'MAKE_UP': 'outline'
+    // Fixed badge variant mapping
+    const getVariant = (status: string): "default" | "destructive" | "outline" | "secondary" => {
+      switch (status) {
+        case 'HADIR': return 'default';
+        case 'TERLAMBAT': return 'secondary';
+        case 'MAKE_UP': return 'outline';
+        default: return 'default';
+      }
     };
     
-    return <Badge variant={variants[status] || 'default'}>{t(`status.${status}`)}</Badge>;
+    return <Badge variant={getVariant(status)}>{t(`status.${status}`)}</Badge>;
   };
 
   const getRiskBadge = (risk: 'low' | 'medium' | 'high') => {
-    const variants = {
-      'low': 'default',
-      'medium': 'secondary',
-      'high': 'destructive'
+    const getVariant = (risk: string): "default" | "destructive" | "outline" | "secondary" => {
+      switch (risk) {
+        case 'low': return 'default';
+        case 'medium': return 'secondary';
+        case 'high': return 'destructive';
+        default: return 'default';
+      }
     };
     
-    return <Badge variant={variants[risk]}>{risk.toUpperCase()}</Badge>;
+    return <Badge variant={getVariant(risk)}>{risk.toUpperCase()}</Badge>;
   };
 
   const getShiftTimeStatus = () => {
@@ -361,11 +369,11 @@ export default function Dashboard() {
                   <Clock className="h-5 w-5" />
                   {t('dashboard.checkInToday')}
                   <div className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-green-600" title="Anti-fraud protection enabled" />
+                    <Shield className="h-4 w-4 text-green-600" />
                     {cameraAvailable ? (
-                      <Camera className="h-4 w-4 text-blue-600" title={t('camera.securePhotoCapture')} />
+                      <Camera className="h-4 w-4 text-blue-600" />
                     ) : (
-                      <CameraOff className="h-4 w-4 text-gray-400" title={t('camera.cameraNotAvailable')} />
+                      <CameraOff className="h-4 w-4 text-gray-400" />
                     )}
                   </div>
                 </CardTitle>

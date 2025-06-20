@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -16,7 +15,7 @@ interface Shift {
   nama_shift: string;
   jam_masuk: string;
   jam_keluar: string;
-  jenis_hari: 'weekday' | 'weekend' | 'holiday' | 'all';
+  jenis_hari: string; // Changed from union type to string to match database
   aktif: boolean;
   created_at?: string;
 }
@@ -54,12 +53,15 @@ export const ShiftSelector = ({ userId, onShiftChange, disabled = false }: Shift
         .order('jam_masuk');
 
       if (error) throw error;
-      setShifts(data || []);
+      
+      // Cast the data to match our interface
+      const shiftsData = (data || []) as Shift[];
+      setShifts(shiftsData);
       
       // Set default shift to first available
-      if (data && data.length > 0 && !selectedShift) {
-        setSelectedShift(data[0].id);
-        onShiftChange?.(data[0]);
+      if (shiftsData && shiftsData.length > 0 && !selectedShift) {
+        setSelectedShift(shiftsData[0].id);
+        onShiftChange?.(shiftsData[0]);
       }
     } catch (error: any) {
       toast({

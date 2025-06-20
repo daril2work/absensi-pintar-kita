@@ -1,15 +1,16 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Smartphone, Shield, AlertTriangle, RotateCcw, Ban, CheckCircle, Eye } from 'lucide-react';
+import { Smartphone, Shield, AlertTriangle, RotateCcw, CheckCircle, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface DeviceRecord {
@@ -134,13 +135,16 @@ export const DeviceManagement = () => {
   };
 
   const getRiskBadge = (risk: string) => {
-    const variants = {
-      'low': 'default',
-      'medium': 'secondary',
-      'high': 'destructive'
+    const getVariant = (risk: string): "default" | "destructive" | "outline" | "secondary" => {
+      switch (risk) {
+        case 'low': return 'default';
+        case 'medium': return 'secondary';
+        case 'high': return 'destructive';
+        default: return 'default';
+      }
     };
     
-    return <Badge variant={variants[risk as keyof typeof variants]}>{risk.toUpperCase()}</Badge>;
+    return <Badge variant={getVariant(risk)}>{risk.toUpperCase()}</Badge>;
   };
 
   const getDeviceInfo = (securityData: any) => {

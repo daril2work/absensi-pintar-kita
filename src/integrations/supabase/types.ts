@@ -14,9 +14,14 @@ export type Database = {
           alasan: string | null
           approved_by: string | null
           created_at: string | null
+          device_fingerprint: string | null
           id: string
           lokasi: string | null
           metode: Database["public"]["Enums"]["attendance_method"]
+          photo_url: string | null
+          risk_level: string | null
+          security_data: Json | null
+          shift_id: string | null
           status: Database["public"]["Enums"]["attendance_status"]
           user_id: string
           waktu: string
@@ -25,9 +30,14 @@ export type Database = {
           alasan?: string | null
           approved_by?: string | null
           created_at?: string | null
+          device_fingerprint?: string | null
           id?: string
           lokasi?: string | null
           metode?: Database["public"]["Enums"]["attendance_method"]
+          photo_url?: string | null
+          risk_level?: string | null
+          security_data?: Json | null
+          shift_id?: string | null
           status: Database["public"]["Enums"]["attendance_status"]
           user_id: string
           waktu?: string
@@ -36,9 +46,14 @@ export type Database = {
           alasan?: string | null
           approved_by?: string | null
           created_at?: string | null
+          device_fingerprint?: string | null
           id?: string
           lokasi?: string | null
           metode?: Database["public"]["Enums"]["attendance_method"]
+          photo_url?: string | null
+          risk_level?: string | null
+          security_data?: Json | null
+          shift_id?: string | null
           status?: Database["public"]["Enums"]["attendance_status"]
           user_id?: string
           waktu?: string
@@ -49,6 +64,13 @@ export type Database = {
             columns: ["approved_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "absensi_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shift"
             referencedColumns: ["id"]
           },
           {
