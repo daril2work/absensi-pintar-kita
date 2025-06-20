@@ -267,49 +267,6 @@ export const ShiftSelector = ({ userId, onShiftChange, disabled = false }: Shift
           </div>
         )}
 
-        {/* Available Shifts Info */}
-        {shifts.length > 1 && (
-          <div className="space-y-2">
-            <h5 className="text-sm font-medium text-gray-700">
-              {t('shift.availableShifts')} {t(`dayType.${dayType}`)}:
-            </h5>
-            <div className="grid gap-2">
-              {shifts.map((shift) => {
-                const status = getShiftStatus(shift);
-                const isSelected = shift.id === selectedShift;
-                
-                return (
-                  <div 
-                    key={shift.id} 
-                    className={`p-3 rounded-lg border text-sm ${
-                      isSelected 
-                        ? 'border-blue-500 bg-blue-50' 
-                        : 'border-gray-200 bg-white'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <span className="font-medium">{shift.nama_shift}</span>
-                        <span className="text-gray-500 ml-2">
-                          {formatShiftTime(shift)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge className={`text-xs ${status.color}`}>
-                          {status.label}
-                        </Badge>
-                        {isSelected && (
-                          <CheckCircle className="h-4 w-4 text-blue-600" />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
         {/* Refresh Button */}
         <Button 
           variant="outline" 
