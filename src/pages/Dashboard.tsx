@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -60,11 +59,12 @@ export default function Dashboard() {
       .select('*')
       .eq('user_id', user?.id)
       .gte('waktu', `${today}T00:00:00.000Z`)
-      .lt('waktu', `${today}T23:59:59.999Z`)
-      .single();
+      .lt('waktu', `${today}T23:59:59.999Z`);
 
-    if (!error && data) {
-      setTodayAttendance(data);
+    if (!error && data && data.length > 0) {
+      setTodayAttendance(data[0]);
+    } else {
+      setTodayAttendance(null);
     }
   };
 
