@@ -29,6 +29,8 @@ export default function Dashboard() {
   const [selectedShift, setSelectedShift] = useState<any>(null);
   const [cameraAvailable, setCameraAvailable] = useState<boolean | null>(null);
   const [photoCapturing, setPhotoCapturing] = useState(false);
+  const [distanceToNearestValidLocation, setDistanceToNearestValidLocation] = useState<number | null>(null);
+  const [nearestValidLocationName, setNearestValidLocationName] = useState<string>('');
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -92,6 +94,9 @@ export default function Dashboard() {
     setIsChecking(true);
     setSecurityWarnings([]);
     setPhotoCapturing(true);
+    // Reset distance and location info
+    setDistanceToNearestValidLocation(null);
+    setNearestValidLocationName('');
     
     let photoUrl: string | null = null;
     let photoStatus = 'no_photo';
@@ -183,10 +188,38 @@ export default function Dashboard() {
       );
 
       if (!locationCheck.isValid) {
+        // Calculate distance to nearest valid location
+        let nearestDistance = Infinity;
+        let nearestLocationName = '';
+        
+        validLocations.forEach(validLoc => {
+          const distance = calculateDistance(
+            location.lat,
+            location.lng,
+            validLoc.latitude,
+            validLoc.longitude
+          );
+          
+          if (distance < nearestDistance) {
+            nearestDistance = distance;
+            nearestLocationName = validLoc.nama_lokasi;
+          }
+        });
+
+        // Update state with distance and location info
+        setDistanceToNearestValidLocation(Math.round(nearestDistance));
+        setNearestValidLocationName(nearestLocationName);
+
+        // Enhanced error message with distance and current location
+        const errorMessage = validLocations.length > 0 
+          ? `${t('notification.notValidLocation')}.\n\nLokasi Anda saat ini: ${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}\n\nJarak ke lokasi terdekat "${nearestLocationName}": ${Math.round(nearestDistance)} meter`
+          : `${t('notification.notValidLocation')}.\n\nLokasi Anda saat ini: ${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}\n\nTidak ada lokasi valid yang dikonfigurasi.`;
+
         toast({
           title: t('notification.locationError'),
-          description: t('notification.notValidLocation'),
+          description: errorMessage,
           variant: "destructive",
+          duration: 8000, // Longer duration for more detailed message
         });
         return;
       }
@@ -267,6 +300,22 @@ export default function Dashboard() {
       setIsChecking(false);
       setPhotoCapturing(false);
     }
+  };
+
+  // Helper function to calculate distance between two points
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371e3; // Earth's radius in meters
+    const φ1 = lat1 * Math.PI/180;
+    const φ2 = lat2 * Math.PI/180;
+    const Δφ = (lat2-lat1) * Math.PI/180;
+    const Δλ = (lon2-lon1) * Math.PI/180;
+
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    return R * c; // in metres
   };
 
   const getStatusBadge = (status: string) => {
@@ -351,6 +400,20 @@ export default function Dashboard() {
                       <li key={index}>{warning}</li>
                     ))}
                   </ul>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Distance and Location Info Alert */}
+            {distanceToNearestValidLocation !== null && nearestValidLocationName && (
+              <Alert variant="destructive">
+                <MapPin className="h-4 w-4" />
+                <AlertTitle>Informasi Lokasi</AlertTitle>
+                <AlertDescription>
+                  <div className="space-y-1">
+                    <p>Jarak ke lokasi terdekat "{nearestValidLocationName}": <strong>{distanceToNearestValidLocation} meter</strong></p>
+                    <p className="text-xs text-gray-600">Silakan bergerak lebih dekat ke lokasi yang valid untuk melakukan absen.</p>
+                  </div>
                 </AlertDescription>
               </Alert>
             )}
@@ -509,6 +572,9 @@ export default function Dashboard() {
                       <h4 className="font-medium">{location.nama_lokasi}</h4>
                       <p className="text-sm text-gray-600">
                         {t('dashboard.radius')}: {location.radius_meter}m
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
                       </p>
                     </div>
                   ))}
