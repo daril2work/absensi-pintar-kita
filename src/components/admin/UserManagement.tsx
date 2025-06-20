@@ -1,4 +1,5 @@
 
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -125,7 +126,7 @@ export const UserManagement = () => {
                     </TableCell>
                     <TableCell>
                       <Select
-                        value={user.role}
+                        value={user.role || 'user'}
                         onValueChange={(value: UserRole) => handleRoleChange(user.id, value)}
                       >
                         <SelectTrigger className="w-32">
@@ -147,3 +148,4 @@ export const UserManagement = () => {
     </Card>
   );
 };
+

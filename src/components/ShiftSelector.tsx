@@ -278,7 +278,7 @@ export const ShiftSelector = ({ userId, onShiftChange, disabled = false }: Shift
         <div className="space-y-2">
           <label className="text-sm font-medium">{t('shift.selectShift')}</label>
           <Select 
-            value={selectedShift} 
+            value={selectedShift || undefined} 
             onValueChange={handleShiftChange}
             disabled={disabled || saving || hasAttendanceToday}
           >
