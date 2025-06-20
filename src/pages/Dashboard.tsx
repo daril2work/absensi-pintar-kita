@@ -494,42 +494,6 @@ export default function Dashboard() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Security Status */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5" />
-                  {t('security.securityStatus')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">{t('device.riskLevel')}</span>
-                    {getRiskBadge(riskLevel)}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    <div className="flex items-center gap-1 mb-1">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span>{t('security.mockLocationDetection')}: {t('security.active')}</span>
-                    </div>
-                    <div className="flex items-center gap-1 mb-1">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span>{t('security.deviceFingerprinting')}: {t('security.active')}</span>
-                    </div>
-                    <div className="flex items-center gap-1 mb-1">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span>{t('security.velocityCheck')}: {t('security.active')}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className={`w-2 h-2 rounded-full ${cameraAvailable ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                      <span>Photo Capture: {cameraAvailable ? t('security.active') : 'Fallback'}</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Valid locations */}
             <Card>
               <CardHeader>
