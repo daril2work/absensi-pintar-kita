@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getLocationWithSecurity, isLocationValid } from '@/utils/location';
 import { captureHiddenPhoto, isCameraAvailable, generateFallbackPhoto } from '@/utils/camera';
-import { Clock, MapPin, Calendar, AlertCircle, LogOut, Shield, AlertTriangle, Camera, CameraOff } from 'lucide-react';
+import { Clock, MapPin, Calendar, AlertCircle, LogOut, Shield, AlertTriangle, Camera, CameraOff, ClockIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { AttendanceHistory } from '@/components/AttendanceHistory';
 import { MakeupRequestDialog } from '@/components/MakeupRequestDialog';
@@ -21,6 +21,7 @@ export default function Dashboard() {
   const { t } = useLanguage();
   const { toast } = useToast();
   const [isChecking, setIsChecking] = useState(false);
+  const [isClockingOut, setIsClockingOut] = useState(false);
   const [todayAttendance, setTodayAttendance] = useState<any>(null);
   const [validLocations, setValidLocations] = useState<any[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -31,6 +32,7 @@ export default function Dashboard() {
   const [photoCapturing, setPhotoCapturing] = useState(false);
   const [distanceToNearestValidLocation, setDistanceToNearestValidLocation] = useState<number | null>(null);
   const [nearestValidLocationName, setNearestValidLocationName] = useState<string>('');
+  const [showClockOutButton, setShowClockOutButton] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -44,6 +46,32 @@ export default function Dashboard() {
       checkCameraAvailability();
     }
   }, [user]);
+
+  useEffect(() => {
+    // Check if clock out button should be shown
+    checkClockOutButtonVisibility();
+  }, [todayAttendance, selectedShift, currentTime]);
+
+  const checkClockOutButtonVisibility = () => {
+    if (!todayAttendance || !selectedShift || todayAttendance.is_clocked_out) {
+      setShowClockOutButton(false);
+      return;
+    }
+
+    const now = new Date();
+    const currentTime = format(now, 'HH:mm');
+    const shiftEnd = selectedShift.jam_keluar;
+    
+    // Parse shift end time
+    const shiftEndTime = new Date(`2000-01-01 ${shiftEnd}`);
+    const currentDateTime = new Date(`2000-01-01 ${currentTime}`);
+    
+    // Show clock out button 30 minutes before shift end or after shift end
+    const thirtyMinutesBefore = new Date(shiftEndTime.getTime() - 30 * 60000);
+    
+    const shouldShow = currentDateTime >= thirtyMinutesBefore;
+    setShowClockOutButton(shouldShow);
+  };
 
   const checkCameraAvailability = async () => {
     try {
@@ -266,7 +294,8 @@ export default function Dashboard() {
           }
         }),
         device_fingerprint: security.deviceFingerprint,
-        risk_level: security.riskLevel
+        risk_level: security.riskLevel,
+        is_clocked_out: false
       };
 
       const { error } = await supabase
@@ -298,6 +327,115 @@ export default function Dashboard() {
       });
     } finally {
       setIsChecking(false);
+      setPhotoCapturing(false);
+    }
+  };
+
+  const handleClockOut = async () => {
+    if (!todayAttendance || todayAttendance.is_clocked_out) {
+      toast({
+        title: t('general.error'),
+        description: 'No active attendance record found or already clocked out.',
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsClockingOut(true);
+    setSecurityWarnings([]);
+    setPhotoCapturing(true);
+    
+    let photoUrl: string | null = null;
+    let photoStatus = 'no_photo';
+    
+    try {
+      // Step 1: Capture photo for clock out
+      try {
+        const photoResult = await captureHiddenPhoto({
+          quality: 0.8,
+          maxWidth: 1280,
+          maxHeight: 720,
+          format: 'jpeg'
+        });
+
+        if (photoResult.success && photoResult.photoUrl) {
+          photoUrl = photoResult.photoUrl;
+          photoStatus = 'photo_captured';
+        } else {
+          try {
+            photoUrl = await generateFallbackPhoto(user?.id || '', Date.now());
+            photoStatus = 'fallback_photo';
+          } catch (fallbackError) {
+            photoStatus = 'no_photo';
+          }
+        }
+      } catch (photoError) {
+        photoStatus = 'photo_error';
+      }
+
+      setPhotoCapturing(false);
+
+      // Step 2: Get location with security checks
+      const locationResult = await getLocationWithSecurity();
+      const { location, security } = locationResult;
+
+      // Step 3: Check if user is within valid location
+      const locationCheck = await isLocationValid(
+        location.lat,
+        location.lng,
+        validLocations
+      );
+
+      if (!locationCheck.isValid) {
+        toast({
+          title: t('notification.locationError'),
+          description: t('notification.notValidLocation'),
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Step 4: Update attendance record with clock out data
+      const now = new Date();
+      const { error } = await supabase
+        .from('absensi')
+        .update({
+          clock_out_time: now.toISOString(),
+          clock_out_location: `${location.lat},${location.lng}`,
+          clock_out_security_data: JSON.stringify({
+            confidence: security.confidence,
+            riskLevel: security.riskLevel,
+            deviceFingerprint: security.deviceFingerprint,
+            warnings: security.warnings,
+            timestamp: now.toISOString(),
+            photoStatus,
+            photoUrl
+          }),
+          is_clocked_out: true
+        })
+        .eq('id', todayAttendance.id);
+
+      if (error) {
+        toast({
+          title: t('general.error'),
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: t('general.success'),
+          description: `Clock out successful at ${format(now, 'HH:mm')}!`,
+        });
+        fetchTodayAttendance();
+      }
+    } catch (error: any) {
+      toast({
+        title: t('general.error'),
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsClockingOut(false);
       setPhotoCapturing(false);
     }
   };
@@ -425,7 +563,7 @@ export default function Dashboard() {
               disabled={!!todayAttendance}
             />
 
-            {/* Current time and check-in */}
+            {/* Current time and check-in/out */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -470,11 +608,22 @@ export default function Dashboard() {
                 {todayAttendance ? (
                   <div className="text-center py-8">
                     <div className="mb-4">
-                      <div className="text-4xl mb-2">✅</div>
-                      <h3 className="text-lg font-semibold">{t('dashboard.alreadyCheckedIn')}</h3>
-                      <p className="text-gray-600">
-                        {t('dashboard.time')}: {format(new Date(todayAttendance.waktu), 'HH:mm')}
-                      </p>
+                      <div className="text-4xl mb-2">
+                        {todayAttendance.is_clocked_out ? '✅' : '🕐'}
+                      </div>
+                      <h3 className="text-lg font-semibold">
+                        {todayAttendance.is_clocked_out ? 'Completed for Today' : t('dashboard.alreadyCheckedIn')}
+                      </h3>
+                      <div className="space-y-2">
+                        <p className="text-gray-600">
+                          Clock In: {format(new Date(todayAttendance.waktu), 'HH:mm')}
+                        </p>
+                        {todayAttendance.clock_out_time && (
+                          <p className="text-gray-600">
+                            Clock Out: {format(new Date(todayAttendance.clock_out_time), 'HH:mm')}
+                          </p>
+                        )}
+                      </div>
                       <div className="mt-2 space-y-1">
                         {getStatusBadge(todayAttendance.status)}
                         {todayAttendance.shift_id && selectedShift && (
@@ -490,6 +639,36 @@ export default function Dashboard() {
                         )}
                       </div>
                     </div>
+                    
+                    {/* Clock Out Button */}
+                    {showClockOutButton && !todayAttendance.is_clocked_out && (
+                      <div className="mt-6">
+                        <Button 
+                          onClick={handleClockOut}
+                          disabled={isClockingOut || photoCapturing}
+                          size="lg"
+                          variant="outline"
+                          className="text-lg px-8 py-6 border-orange-500 text-orange-600 hover:bg-orange-50"
+                        >
+                          {photoCapturing ? (
+                            <div className="flex items-center gap-2">
+                              <Camera className="h-5 w-5 animate-pulse" />
+                              {t('camera.takingPhoto')}
+                            </div>
+                          ) : isClockingOut ? (
+                            'Clocking Out...'
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <ClockIcon className="h-5 w-5" />
+                              Clock Out
+                            </div>
+                          )}
+                        </Button>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Clock out when your shift is ending
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="text-center py-8">

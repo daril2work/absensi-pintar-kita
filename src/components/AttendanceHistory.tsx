@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
-import { Calendar, Clock } from 'lucide-react';
+import { Calendar, Clock, ClockIcon } from 'lucide-react';
 
 interface AttendanceHistoryProps {
   userId?: string;
@@ -54,6 +53,18 @@ export const AttendanceHistory = ({ userId }: AttendanceHistoryProps) => {
     );
   };
 
+  const formatWorkingHours = (clockIn: string, clockOut?: string) => {
+    if (!clockOut) return 'In Progress';
+    
+    const start = new Date(clockIn);
+    const end = new Date(clockOut);
+    const diffMs = end.getTime() - start.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return `${diffHours}h ${diffMinutes}m`;
+  };
+
   if (loading) {
     return (
       <Card>
@@ -94,7 +105,9 @@ export const AttendanceHistory = ({ userId }: AttendanceHistoryProps) => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Date</TableHead>
-                  <TableHead>Time</TableHead>
+                  <TableHead>Clock In</TableHead>
+                  <TableHead>Clock Out</TableHead>
+                  <TableHead>Working Hours</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Method</TableHead>
                 </TableRow>
@@ -106,7 +119,25 @@ export const AttendanceHistory = ({ userId }: AttendanceHistoryProps) => {
                       {format(new Date(record.waktu), 'dd MMM yyyy')}
                     </TableCell>
                     <TableCell>
-                      {format(new Date(record.waktu), 'HH:mm')}
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3 text-green-600" />
+                        {format(new Date(record.waktu), 'HH:mm')}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {record.clock_out_time ? (
+                        <div className="flex items-center gap-1">
+                          <ClockIcon className="h-3 w-3 text-orange-600" />
+                          {format(new Date(record.clock_out_time), 'HH:mm')}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-sm">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm font-medium">
+                        {formatWorkingHours(record.waktu, record.clock_out_time)}
+                      </span>
                     </TableCell>
                     <TableCell>
                       {getStatusBadge(record.status)}
