@@ -15,6 +15,7 @@ import { AttendanceHistory } from '@/components/AttendanceHistory';
 import { MakeupRequestDialog } from '@/components/MakeupRequestDialog';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { ShiftSelector } from '@/components/ShiftSelector';
+import { DashboardStats } from '@/components/DashboardStats';
 
 export default function Dashboard() {
   const { user, profile, signOut } = useAuth();
@@ -736,6 +737,9 @@ export default function Dashboard() {
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Dynamic Statistics - Replace the old static stats */}
+            {user?.id && <DashboardStats userId={user.id} />}
+
             {/* Valid locations */}
             <Card>
               <CardHeader>
@@ -774,36 +778,6 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <MakeupRequestDialog userId={user?.id} onSuccess={fetchTodayAttendance} />
-              </CardContent>
-            </Card>
-
-            {/* Quick stats */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  {t('dashboard.thisMonth')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">{t('dashboard.totalDays')}</span>
-                    <span className="font-medium">22</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">{t('dashboard.present')}</span>
-                    <span className="font-medium text-green-600">18</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">{t('dashboard.late')}</span>
-                    <span className="font-medium text-yellow-600">2</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">{t('dashboard.absent')}</span>
-                    <span className="font-medium text-red-600">2</span>
-                  </div>
-                </div>
               </CardContent>
             </Card>
           </div>
