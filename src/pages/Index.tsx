@@ -234,11 +234,36 @@ const Index = () => {
       </div>
 
       {/* Footer */}
-      <div className="py-8 bg-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-gray-400">
-            {t('landing.footerText')}
-          </p>
+      <div className="py-12 bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center space-y-4">
+            <p className="text-gray-400">
+              {t('landing.footerText')}
+            </p>
+            <div className="flex flex-col items-center space-y-2">
+              <p className="text-sm text-gray-500">
+                {t('landing.poweredBy')}
+              </p>
+              <p className="text-lg font-semibold text-white">
+                {t('landing.collaborationText')}
+              </p>
+              <div className="flex items-center space-x-6 mt-4">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg flex items-center justify-center mb-2">
+                    <span className="text-white font-bold text-lg">C1</span>
+                  </div>
+                  <p className="text-xs text-gray-400">Cluster 1</p>
+                </div>
+                <div className="text-gray-400">×</div>
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-700 rounded-lg flex items-center justify-center mb-2">
+                    <span className="text-white font-bold text-lg">ST</span>
+                  </div>
+                  <p className="text-xs text-gray-400">Symbiotech</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

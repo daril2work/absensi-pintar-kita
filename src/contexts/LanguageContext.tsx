@@ -44,6 +44,8 @@ const translations = {
     'landing.readyToModernizeDesc': 'Bergabunglah dengan organisasi yang mempercayai sistem absensi berbasis GPS kami untuk pelacakan yang akurat dan real-time.',
     'landing.startFreeToday': 'Mulai Gratis Hari Ini',
     'landing.footerText': '© 2024 Sistem Absensi. Dibangun dengan teknologi modern untuk pelacakan absensi yang andal.',
+    'landing.collaborationText': 'Kolaborasi antara Cluster 1 dan Symbiotech',
+    'landing.poweredBy': 'Didukung oleh',
     
     // Auth
     'auth.signIn': 'Masuk',
@@ -400,6 +402,8 @@ const translations = {
     'landing.readyToModernizeDesc': 'Join organizations that trust our GPS-powered attendance system for accurate, real-time tracking.',
     'landing.startFreeToday': 'Start Free Today',
     'landing.footerText': '© 2024 Attendance System. Built with modern technology for reliable attendance tracking.',
+    'landing.collaborationText': 'Collaboration between Cluster 1 and Symbiotech',
+    'landing.poweredBy': 'Powered by',
     
     // Auth
     'auth.signIn': 'Sign In',
