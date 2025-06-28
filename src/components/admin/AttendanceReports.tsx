@@ -48,18 +48,21 @@ interface UserDailyData {
   workingDays: number;
 }
 
-// 📍 KOORDINAT PUSKESMAS KUNJANG - SILAKAN SESUAIKAN DENGAN KOORDINAT SEBENARNYA
-const PUSKESMAS_KUNJANG_COORDS = {
-  latitude: -6.9175,   // ← GANTI dengan latitude Puskesmas Kunjang yang sebenarnya
-  longitude: 107.6191, // ← GANTI dengan longitude Puskesmas Kunjang yang sebenarnya
-  name: "Puskesmas Kunjang"
-};
+interface ValidLocation {
+  id: string;
+  nama_lokasi: string;
+  latitude: number;
+  longitude: number;
+  radius_meter: number;
+  aktif: boolean;
+}
 
 export const AttendanceReports = () => {
   const { toast } = useToast();
   const { t } = useLanguage();
   const [attendance, setAttendance] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [validLocations, setValidLocations] = useState<ValidLocation[]>([]);
   const [hoursSummary, setHoursSummary] = useState<HoursSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
@@ -78,6 +81,7 @@ export const AttendanceReports = () => {
 
   useEffect(() => {
     fetchUsers();
+    fetchValidLocations();
     fetchAttendanceData();
   }, []);
 
@@ -105,29 +109,39 @@ export const AttendanceReports = () => {
     return R * c; // distance in metres
   };
 
-  // 📍 Function to get distance from user location to Puskesmas Kunjang
-  const getDistanceFromPuskesmas = (lokasi: string | null): string => {
-    if (!lokasi) return '-';
+  // 📍 Function to get distance from user location to nearest valid location
+  const getDistanceFromValidLocations = (lokasi: string | null): string => {
+    if (!lokasi || validLocations.length === 0) return '-';
     
     try {
       // Parse user coordinates from "lat,lng" format
       const [userLat, userLng] = lokasi.split(',').map(Number);
       if (isNaN(userLat) || isNaN(userLng)) return 'Invalid coordinates';
       
-      // Calculate distance from user location to Puskesmas Kunjang
-      const distance = calculateDistance(
-        userLat, 
-        userLng, 
-        PUSKESMAS_KUNJANG_COORDS.latitude, 
-        PUSKESMAS_KUNJANG_COORDS.longitude
-      );
+      // Find the nearest valid location
+      let nearestDistance = Infinity;
+      let nearestLocationName = '';
       
-      // Format distance display
-      if (distance < 1000) {
-        return `${Math.round(distance)} m`;
-      } else {
-        return `${(distance / 1000).toFixed(2)} km`;
-      }
+      validLocations.forEach(location => {
+        const distance = calculateDistance(
+          userLat, 
+          userLng, 
+          location.latitude, 
+          location.longitude
+        );
+        
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          nearestLocationName = location.nama_lokasi;
+        }
+      });
+      
+      // Format distance display with location name
+      const formattedDistance = nearestDistance < 1000 
+        ? `${Math.round(nearestDistance)} m`
+        : `${(nearestDistance / 1000).toFixed(2)} km`;
+      
+      return `${formattedDistance} dari ${nearestLocationName}`;
     } catch (error) {
       console.error('Error calculating distance:', error);
       return 'Error calculating';
@@ -143,6 +157,18 @@ export const AttendanceReports = () => {
 
     if (!error && data) {
       setUsers(data);
+    }
+  };
+
+  const fetchValidLocations = async () => {
+    const { data, error } = await supabase
+      .from('lokasi_valid')
+      .select('*')
+      .eq('aktif', true)
+      .order('nama_lokasi');
+
+    if (!error && data) {
+      setValidLocations(data);
     }
   };
 
@@ -394,7 +420,7 @@ export const AttendanceReports = () => {
       t('general.time'), 
       t('attendance.status'), 
       t('general.method'), 
-      `Jarak dari ${PUSKESMAS_KUNJANG_COORDS.name}`,
+      'Jarak dari Lokasi Valid',
       'Link Foto',
       t('admin.reason')
     ];
@@ -405,7 +431,7 @@ export const AttendanceReports = () => {
       format(new Date(record.waktu), 'HH:mm:ss'),
       t(`status.${record.status}`),
       record.metode === 'absen' ? t('admin.regular') : t('admin.makeup'),
-      getDistanceFromPuskesmas(record.lokasi),
+      getDistanceFromValidLocations(record.lokasi),
       record.photo_url || 'Tidak ada foto',
       record.alasan || ''
     ]);
@@ -826,7 +852,7 @@ export const AttendanceReports = () => {
               </CardTitle>
               <CardDescription className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-blue-600" />
-                {t('admin.filterAttendanceData')} - Termasuk jarak dari <strong>{PUSKESMAS_KUNJANG_COORDS.name}</strong> dan foto absensi
+                {t('admin.filterAttendanceData')} - Termasuk jarak dari lokasi valid yang dikonfigurasi dan foto absensi
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -911,20 +937,35 @@ export const AttendanceReports = () => {
             </CardContent>
           </Card>
 
-          {/* Puskesmas Coordinates Info */}
+          {/* Valid Locations Info */}
           <Card className="bg-blue-50 border-blue-200">
             <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <MapPin className="h-5 w-5 text-blue-600" />
-                <div>
-                  <div className="font-semibold text-blue-900">Referensi Lokasi: {PUSKESMAS_KUNJANG_COORDS.name}</div>
-                  <div className="text-sm text-blue-700">
-                    Koordinat: {PUSKESMAS_KUNJANG_COORDS.latitude}, {PUSKESMAS_KUNJANG_COORDS.longitude}
-                  </div>
-                  <div className="text-xs text-blue-600 mt-1">
-                    💡 Jarak dihitung dari lokasi absensi user ke koordinat Puskesmas Kunjang menggunakan formula Haversine
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <MapPin className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <div className="font-semibold text-blue-900">Lokasi Valid yang Dikonfigurasi ({validLocations.length} lokasi)</div>
+                    <div className="text-xs text-blue-600 mt-1">
+                      💡 Jarak dihitung dari lokasi absensi user ke lokasi valid terdekat menggunakan formula Haversine
+                    </div>
                   </div>
                 </div>
+                
+                {validLocations.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {validLocations.map((location) => (
+                      <div key={location.id} className="bg-white p-3 rounded border border-blue-200">
+                        <div className="font-medium text-blue-900">{location.nama_lokasi}</div>
+                        <div className="text-sm text-blue-700">
+                          📍 {location.latitude}, {location.longitude}
+                        </div>
+                        <div className="text-xs text-blue-600">
+                          📏 Radius: {location.radius_meter}m
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -939,7 +980,7 @@ export const AttendanceReports = () => {
                     {t('admin.attendanceReport')}
                   </CardTitle>
                   <CardDescription>
-                    {attendance.length} {t('admin.recordsFound')} - Dengan jarak dari {PUSKESMAS_KUNJANG_COORDS.name} dan foto absensi
+                    {attendance.length} {t('admin.recordsFound')} - Dengan jarak dari lokasi valid terdekat dan foto absensi
                   </CardDescription>
                 </div>
               </div>
@@ -961,10 +1002,10 @@ export const AttendanceReports = () => {
                         <TableHead>{t('general.time')}</TableHead>
                         <TableHead>{t('attendance.status')}</TableHead>
                         <TableHead>{t('general.method')}</TableHead>
-                        <TableHead className="min-w-[140px]">
+                        <TableHead className="min-w-[180px]">
                           <div className="flex items-center gap-1">
                             <MapPin className="h-4 w-4 text-blue-600" />
-                            Jarak dari {PUSKESMAS_KUNJANG_COORDS.name}
+                            Jarak dari Lokasi Valid
                           </div>
                         </TableHead>
                         <TableHead>
@@ -998,7 +1039,7 @@ export const AttendanceReports = () => {
                             <div className="flex items-center gap-2">
                               <MapPin className="h-3 w-3 text-blue-500" />
                               <span className="text-sm font-mono">
-                                {getDistanceFromPuskesmas(record.lokasi)}
+                                {getDistanceFromValidLocations(record.lokasi)}
                               </span>
                             </div>
                           </TableCell>
