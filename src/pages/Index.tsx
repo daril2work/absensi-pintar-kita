@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageToggle } from '@/components/LanguageToggle';
-import { Clock, MapPin, Users, Shield, Smartphone, BarChart3 } from 'lucide-react';
+import { Clock, MapPin, Users, Shield, Smartphone, BarChart3, ShieldCheck } from 'lucide-react';
 
 const Index = () => {
   const { user, profile, loading } = useAuth();
@@ -122,6 +122,18 @@ const Index = () => {
                 <CardTitle>{t('landing.mobileFirstDesign')}</CardTitle>
                 <CardDescription>
                   {t('landing.mobileFirstDesignDesc')}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow border-2 border-red-200 bg-red-50">
+              <CardHeader>
+                <div className="p-3 bg-red-100 rounded-lg w-fit">
+                  <ShieldCheck className="h-8 w-8 text-red-600" />
+                </div>
+                <CardTitle className="text-red-800">{t('landing.antiFraudSystem')}</CardTitle>
+                <CardDescription className="text-red-700">
+                  {t('landing.antiFraudSystemDesc')}
                 </CardDescription>
               </CardHeader>
             </Card>
