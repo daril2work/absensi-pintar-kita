@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Download, FileText, Filter, BarChart3, Clock, ChevronLeft, ChevronRight, Calendar, Camera, ExternalLink } from 'lucide-react';
+import { Download, FileText, Filter, BarChart3, Clock, ChevronLeft, ChevronRight, Calendar, Camera, ExternalLink, MapPin } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isWeekend } from 'date-fns';
 import { Database } from '@/integrations/supabase/types';
 import { AnalyticsCards } from '@/components/analytics/AnalyticsCards';
@@ -48,10 +48,11 @@ interface UserDailyData {
   workingDays: number;
 }
 
-// Koordinat Puskesmas Kunjang (contoh koordinat - sesuaikan dengan koordinat sebenarnya)
+// 📍 KOORDINAT PUSKESMAS KUNJANG - SILAKAN SESUAIKAN DENGAN KOORDINAT SEBENARNYA
 const PUSKESMAS_KUNJANG_COORDS = {
-  latitude: -6.9175, // Ganti dengan koordinat sebenarnya
-  longitude: 107.6191 // Ganti dengan koordinat sebenarnya
+  latitude: -6.9175,   // ← GANTI dengan latitude Puskesmas Kunjang yang sebenarnya
+  longitude: 107.6191, // ← GANTI dengan longitude Puskesmas Kunjang yang sebenarnya
+  name: "Puskesmas Kunjang"
 };
 
 export const AttendanceReports = () => {
@@ -88,7 +89,7 @@ export const AttendanceReports = () => {
     fetchGridData();
   }, [currentMonth, filters.userId]);
 
-  // Function to calculate distance between two coordinates
+  // 📐 Function to calculate distance between two coordinates using Haversine formula
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371e3; // Earth's radius in meters
     const φ1 = lat1 * Math.PI/180;
@@ -101,31 +102,35 @@ export const AttendanceReports = () => {
             Math.sin(Δλ/2) * Math.sin(Δλ/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 
-    return R * c; // in metres
+    return R * c; // distance in metres
   };
 
-  // Function to get distance from Puskesmas Kunjang
+  // 📍 Function to get distance from user location to Puskesmas Kunjang
   const getDistanceFromPuskesmas = (lokasi: string | null): string => {
     if (!lokasi) return '-';
     
     try {
-      const [lat, lng] = lokasi.split(',').map(Number);
-      if (isNaN(lat) || isNaN(lng)) return '-';
+      // Parse user coordinates from "lat,lng" format
+      const [userLat, userLng] = lokasi.split(',').map(Number);
+      if (isNaN(userLat) || isNaN(userLng)) return 'Invalid coordinates';
       
+      // Calculate distance from user location to Puskesmas Kunjang
       const distance = calculateDistance(
-        lat, 
-        lng, 
+        userLat, 
+        userLng, 
         PUSKESMAS_KUNJANG_COORDS.latitude, 
         PUSKESMAS_KUNJANG_COORDS.longitude
       );
       
+      // Format distance display
       if (distance < 1000) {
         return `${Math.round(distance)} m`;
       } else {
         return `${(distance / 1000).toFixed(2)} km`;
       }
     } catch (error) {
-      return '-';
+      console.error('Error calculating distance:', error);
+      return 'Error calculating';
     }
   };
 
@@ -389,7 +394,7 @@ export const AttendanceReports = () => {
       t('general.time'), 
       t('attendance.status'), 
       t('general.method'), 
-      'Jarak dari Puskesmas Kunjang',
+      `Jarak dari ${PUSKESMAS_KUNJANG_COORDS.name}`,
       'Link Foto',
       t('admin.reason')
     ];
@@ -819,8 +824,9 @@ export const AttendanceReports = () => {
                 <Filter className="h-5 w-5" />
                 {t('admin.filterExport')}
               </CardTitle>
-              <CardDescription>
-                {t('admin.filterAttendanceData')} - Termasuk jarak dari Puskesmas Kunjang dan foto absensi
+              <CardDescription className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-blue-600" />
+                {t('admin.filterAttendanceData')} - Termasuk jarak dari <strong>{PUSKESMAS_KUNJANG_COORDS.name}</strong> dan foto absensi
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -905,6 +911,24 @@ export const AttendanceReports = () => {
             </CardContent>
           </Card>
 
+          {/* Puskesmas Coordinates Info */}
+          <Card className="bg-blue-50 border-blue-200">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <MapPin className="h-5 w-5 text-blue-600" />
+                <div>
+                  <div className="font-semibold text-blue-900">Referensi Lokasi: {PUSKESMAS_KUNJANG_COORDS.name}</div>
+                  <div className="text-sm text-blue-700">
+                    Koordinat: {PUSKESMAS_KUNJANG_COORDS.latitude}, {PUSKESMAS_KUNJANG_COORDS.longitude}
+                  </div>
+                  <div className="text-xs text-blue-600 mt-1">
+                    💡 Jarak dihitung dari lokasi absensi user ke koordinat Puskesmas Kunjang menggunakan formula Haversine
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Report Table */}
           <Card>
             <CardHeader>
@@ -915,7 +939,7 @@ export const AttendanceReports = () => {
                     {t('admin.attendanceReport')}
                   </CardTitle>
                   <CardDescription>
-                    {attendance.length} {t('admin.recordsFound')} - Dengan jarak dari Puskesmas Kunjang dan foto absensi
+                    {attendance.length} {t('admin.recordsFound')} - Dengan jarak dari {PUSKESMAS_KUNJANG_COORDS.name} dan foto absensi
                   </CardDescription>
                 </div>
               </div>
@@ -937,8 +961,18 @@ export const AttendanceReports = () => {
                         <TableHead>{t('general.time')}</TableHead>
                         <TableHead>{t('attendance.status')}</TableHead>
                         <TableHead>{t('general.method')}</TableHead>
-                        <TableHead>Jarak dari Puskesmas Kunjang</TableHead>
-                        <TableHead>Foto Absensi</TableHead>
+                        <TableHead className="min-w-[140px]">
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-4 w-4 text-blue-600" />
+                            Jarak dari {PUSKESMAS_KUNJANG_COORDS.name}
+                          </div>
+                        </TableHead>
+                        <TableHead>
+                          <div className="flex items-center gap-1">
+                            <Camera className="h-4 w-4 text-green-600" />
+                            Foto Absensi
+                          </div>
+                        </TableHead>
                         <TableHead>{t('admin.reason')}</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -961,8 +995,11 @@ export const AttendanceReports = () => {
                             {getMethodBadge(record.metode)}
                           </TableCell>
                           <TableCell>
-                            <div className="text-sm">
-                              {getDistanceFromPuskesmas(record.lokasi)}
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-3 w-3 text-blue-500" />
+                              <span className="text-sm font-mono">
+                                {getDistanceFromPuskesmas(record.lokasi)}
+                              </span>
                             </div>
                           </TableCell>
                           <TableCell>
