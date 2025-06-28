@@ -99,10 +99,10 @@ export const AnalyticsCards = () => {
         .gte('waktu', previousMonth.start.toISOString())
         .lte('waktu', previousMonth.end.toISOString());
 
-      // Fetch location data
+      // Fetch location data with real attendance counts
       const { data: locations } = await supabase
         .from('lokasi_valid')
-        .select('nama_lokasi');
+        .select('nama_lokasi, latitude, longitude');
 
       // Process data
       const totalEmployees = employees?.length || 0;
@@ -138,12 +138,52 @@ export const AnalyticsCards = () => {
       const currentAttendanceRate = monthlyTotal > 0 ? ((monthlyPresent + monthlyLate) / monthlyTotal) * 100 : 0;
       const currentPunctualityRate = (monthlyPresent + monthlyLate) > 0 ? (monthlyPresent / (monthlyPresent + monthlyLate)) * 100 : 0;
 
-      // Top locations (simplified)
-      const topLocations = locations?.slice(0, 3).map((loc, index) => ({
-        name: loc.nama_lokasi,
-        count: Math.floor(Math.random() * 100) + 50, // Mock data
-        percentage: Math.floor(Math.random() * 30) + 20
-      })) || [];
+      // Calculate REAL top locations based on actual attendance data
+      const locationStats = new Map<string, number>();
+      
+      // Count attendance per location
+      currentMonthData?.forEach(record => {
+        if (record.lokasi) {
+          // Find the closest valid location for this attendance record
+          const [lat, lng] = record.lokasi.split(',').map(Number);
+          if (!isNaN(lat) && !isNaN(lng)) {
+            let closestLocation = null;
+            let minDistance = Infinity;
+            
+            locations?.forEach(location => {
+              const distance = calculateDistance(lat, lng, location.latitude, location.longitude);
+              if (distance < minDistance) {
+                minDistance = distance;
+                closestLocation = location.nama_lokasi;
+              }
+            });
+            
+            if (closestLocation && minDistance < 1000) { // Within 1km
+              locationStats.set(closestLocation, (locationStats.get(closestLocation) || 0) + 1);
+            }
+          }
+        }
+      });
+
+      // Convert to sorted array and calculate percentages
+      const totalLocationAttendance = Array.from(locationStats.values()).reduce((sum, count) => sum + count, 0);
+      const topLocations = Array.from(locationStats.entries())
+        .sort(([, a], [, b]) => b - a) // Sort by count descending
+        .slice(0, 3) // Top 3 locations
+        .map(([name, count]) => ({
+          name,
+          count,
+          percentage: totalLocationAttendance > 0 ? Math.round((count / totalLocationAttendance) * 100) : 0
+        }));
+
+      // If no location data, show message instead of dummy data
+      if (topLocations.length === 0 && locations && locations.length > 0) {
+        topLocations.push({
+          name: t('analytics.noLocationData'),
+          count: 0,
+          percentage: 0
+        });
+      }
 
       setAnalytics({
         totalEmployees,
@@ -175,6 +215,22 @@ export const AnalyticsCards = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper function to calculate distance between two points
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371e3; // Earth's radius in meters
+    const φ1 = lat1 * Math.PI/180;
+    const φ2 = lat2 * Math.PI/180;
+    const Δφ = (lat2-lat1) * Math.PI/180;
+    const Δλ = (lon2-lon1) * Math.PI/180;
+
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    return R * c; // in metres
   };
 
   if (loading || !analytics) {
@@ -456,22 +512,29 @@ export const AnalyticsCards = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {analytics.topLocations.map((location, index) => (
-                  <div key={index} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{location.name}</span>
-                      <Badge variant="outline" className="text-xs">
-                        {location.count} {t('analytics.checkIns')}
-                      </Badge>
+                {analytics.topLocations.length > 0 ? (
+                  analytics.topLocations.map((location, index) => (
+                    <div key={index} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">{location.name}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {location.count} {t('analytics.checkIns')}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Progress value={location.percentage} className="h-2 flex-1" />
+                        <span className="text-xs text-gray-600 w-12">
+                          {location.percentage}%
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Progress value={location.percentage} className="h-2 flex-1" />
-                      <span className="text-xs text-gray-600 w-12">
-                        {location.percentage}%
-                      </span>
-                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-gray-500">
+                    <MapPin className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">{t('analytics.noLocationData')}</p>
                   </div>
-                ))}
+                )}
               </div>
             </CardContent>
           </Card>
