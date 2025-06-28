@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Download, FileText, Filter, BarChart3, Clock, ChevronLeft, ChevronRight, Calendar, Grid3X3 } from 'lucide-react';
+import { Download, FileText, Filter, BarChart3, Clock, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isWeekend } from 'date-fns';
 import { Database } from '@/integrations/supabase/types';
 import { AnalyticsCards } from '@/components/analytics/AnalyticsCards';
@@ -46,6 +46,9 @@ interface UserDailyData {
   totalExpectedHours: number;
   totalActualHours: number;
   workingDays: number;
+  efficiency: number;
+  averageHoursPerDay: number;
+  overtimeHours: number;
 }
 
 export const AttendanceReports = () => {
@@ -243,6 +246,10 @@ export const AttendanceReports = () => {
         };
       });
 
+      const overtimeHours = Math.max(0, totalActualHours - totalExpectedHours);
+      const efficiency = totalExpectedHours > 0 ? (totalActualHours / totalExpectedHours) * 100 : 0;
+      const averageHoursPerDay = workingDaysCount > 0 ? totalActualHours / workingDaysCount : 0;
+
       return {
         userId: user.id,
         userName: user.name,
@@ -250,7 +257,10 @@ export const AttendanceReports = () => {
         totalMissingHours: Math.round(totalMissingHours * 100) / 100,
         totalExpectedHours: Math.round(totalExpectedHours * 100) / 100,
         totalActualHours: Math.round(totalActualHours * 100) / 100,
-        workingDays: workingDaysCount
+        workingDays: workingDaysCount,
+        efficiency: Math.round(efficiency * 100) / 100,
+        averageHoursPerDay: Math.round(averageHoursPerDay * 100) / 100,
+        overtimeHours: Math.round(overtimeHours * 100) / 100
       };
     });
 
@@ -368,54 +378,27 @@ export const AttendanceReports = () => {
 
   const exportHoursToCSV = () => {
     const headers = [
-      t('general.name'),
-      t('admin.workingDays'),
-      t('admin.totalExpectedHours'),
-      t('admin.totalActualHours'),
-      t('admin.missingHours'),
-      t('admin.overtimeHours'),
-      t('admin.averageHoursPerDay'),
-      t('admin.hoursEfficiency') + ' (%)'
+      'Nama',
+      'Total Kekurangan Jam',
+      'Hari Kerja',
+      'Expected Hours',
+      'Actual Hours',
+      'Overtime Hours',
+      'Efficiency (%)',
+      'Avg Hours/Day',
+      ...workingDays.map(date => format(date, 'd'))
     ];
-    
-    const csvData = hoursSummary.map(summary => [
-      summary.userName,
-      summary.workingDays.toString(),
-      summary.totalExpectedHours.toString(),
-      summary.totalActualHours.toString(),
-      summary.missingHours.toString(),
-      summary.overtimeHours.toString(),
-      summary.averageHoursPerDay.toString(),
-      summary.efficiency.toString()
-    ]);
-
-    const csvContent = [headers, ...csvData]
-      .map(row => row.map(field => `"${field}"`).join(','))
-      .join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `hours-report-${format(new Date(), 'yyyy-MM-dd')}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    toast({
-      title: t('general.success'),
-      description: t('admin.exportSuccess'),
-    });
-  };
-
-  const exportGridToCSV = () => {
-    const headers = ['Nama', 'Total Kekurangan Jam', 'Hari Kerja', ...workingDays.map(date => format(date, 'd'))];
     
     const csvData = gridData.map(user => {
       const row = [
         user.userName,
         user.totalMissingHours.toString(),
-        user.workingDays.toString()
+        user.workingDays.toString(),
+        user.totalExpectedHours.toString(),
+        user.totalActualHours.toString(),
+        user.overtimeHours.toString(),
+        user.efficiency.toString(),
+        user.averageHoursPerDay.toString()
       ];
       
       // Add daily data
@@ -444,7 +427,7 @@ export const AttendanceReports = () => {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `daily-hours-grid-${format(currentMonth, 'yyyy-MM')}.csv`);
+    link.setAttribute('download', `hours-report-${format(currentMonth, 'yyyy-MM')}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -544,7 +527,7 @@ export const AttendanceReports = () => {
                 {t('admin.filterExport')}
               </CardTitle>
               <CardDescription>
-                {t('admin.hoursReportDescription')}
+                Laporan jam kerja dengan ringkasan dan grid harian terintegrasi
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -595,284 +578,214 @@ export const AttendanceReports = () => {
                   <Label>&nbsp;</Label>
                   <Button onClick={exportHoursToCSV} className="w-full">
                     <Download className="h-4 w-4 mr-2" />
-                    {t('admin.csv')}
+                    Export CSV
                   </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Sub-tabs for Hours Report */}
-          <Tabs defaultValue="summary" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="summary" className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Ringkasan Jam Kerja
-              </TabsTrigger>
-              <TabsTrigger value="daily-grid" className="flex items-center gap-2">
-                <Grid3X3 className="h-4 w-4" />
-                Grid Harian
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="summary">
-              {/* Hours Summary */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Clock className="h-5 w-5" />
-                    {t('admin.employeeHoursSummary')}
-                  </CardTitle>
-                  <CardDescription>
-                    {hoursSummary.length} {t('admin.employee').toLowerCase()} ditemukan
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {loading ? (
-                    <div className="animate-pulse space-y-4">
-                      {[...Array(5)].map((_, i) => (
-                        <div key={i} className="h-12 bg-gray-200 rounded"></div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>{t('admin.employee')}</TableHead>
-                            <TableHead className="text-center">{t('admin.workingDays')}</TableHead>
-                            <TableHead className="text-center">{t('admin.expectedHours')}</TableHead>
-                            <TableHead className="text-center">{t('admin.actualHours')}</TableHead>
-                            <TableHead className="text-center">{t('admin.missingHours')}</TableHead>
-                            <TableHead className="text-center">{t('admin.overtimeHours')}</TableHead>
-                            <TableHead className="text-center">{t('admin.averageHoursPerDay')}</TableHead>
-                            <TableHead className="text-center">{t('admin.hoursEfficiency')}</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {hoursSummary.map((summary) => (
-                            <TableRow key={summary.userId}>
-                              <TableCell className="font-medium">
-                                {summary.userName}
-                              </TableCell>
-                              <TableCell className="text-center">
-                                {summary.workingDays}
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <span className="font-mono">{summary.totalExpectedHours}h</span>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <span className="font-mono">{summary.totalActualHours}h</span>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                {summary.missingHours > 0 ? (
-                                  <span className="font-mono text-red-600">-{summary.missingHours}h</span>
-                                ) : (
-                                  <span className="text-gray-400">0h</span>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-center">
-                                {summary.overtimeHours > 0 ? (
-                                  <span className="font-mono text-green-600">+{summary.overtimeHours}h</span>
-                                ) : (
-                                  <span className="text-gray-400">0h</span>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <span className="font-mono">{summary.averageHoursPerDay}h</span>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                {getEfficiencyBadge(summary.efficiency)}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="daily-grid">
-              {/* Daily Grid Header Controls */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Grid3X3 className="h-5 w-5" />
-                    Grid Harian Jam Kerja
-                  </CardTitle>
-                  <CardDescription>
-                    Grid harian menampilkan kekurangan jam kerja per karyawan per tanggal
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <div className="text-lg font-semibold min-w-[200px] text-center">
-                        {format(currentMonth, 'MMMM yyyy')}
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    
-                    <Button onClick={exportGridToCSV} variant="outline">
-                      <Download className="h-4 w-4 mr-2" />
-                      Export Grid CSV
-                    </Button>
+          {/* Month Navigation for Grid */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <div className="text-lg font-semibold min-w-[200px] text-center">
+                    Grid Harian: {format(currentMonth, 'MMMM yyyy')}
                   </div>
-                </CardContent>
-              </Card>
-
-              {/* Legend */}
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-6 text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-red-100 border border-red-200 rounded flex items-center justify-center text-red-800 text-xs font-bold">
-                        -2h
-                      </div>
-                      <span>Kekurangan Jam</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                {/* Legend */}
+                <div className="flex items-center gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-red-100 border border-red-200 rounded flex items-center justify-center text-red-800 text-xs font-bold">
+                      -2h
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-green-100 border border-green-200 rounded flex items-center justify-center text-green-800 text-xs font-bold">
-                        ✓
-                      </div>
-                      <span>Jam Lengkap</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-gray-100 border border-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
-                        -
-                      </div>
-                      <span>Tidak Absen</span>
-                    </div>
+                    <span>Kurang Jam</span>
                   </div>
-                </CardContent>
-              </Card>
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-green-100 border border-green-200 rounded flex items-center justify-center text-green-800 text-xs font-bold">
+                      ✓
+                    </div>
+                    <span>Lengkap</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-gray-100 border border-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
+                      -
+                    </div>
+                    <span>Tidak Absen</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-              {/* Grid Table */}
-              <Card>
-                <CardContent className="p-0">
-                  {gridLoading ? (
-                    <div className="p-6">
-                      <div className="animate-pulse space-y-4">
-                        {[...Array(5)].map((_, i) => (
-                          <div key={i} className="h-12 bg-gray-200 rounded"></div>
+          {/* Integrated Hours Summary and Daily Grid */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Laporan Jam Kerja & Grid Harian
+              </CardTitle>
+              <CardDescription>
+                Ringkasan jam kerja dengan detail harian per karyawan
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              {gridLoading ? (
+                <div className="p-6">
+                  <div className="animate-pulse space-y-4">
+                    {[...Array(5)].map((_, i) => (
+                      <div key={i} className="h-12 bg-gray-200 rounded"></div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        {/* Summary Columns */}
+                        <th className="sticky left-0 bg-gray-50 px-4 py-3 text-left text-sm font-semibold text-gray-900 border-r">
+                          Nama Karyawan
+                        </th>
+                        <th className="px-3 py-3 text-center text-sm font-semibold text-gray-900 border-r min-w-[100px]">
+                          Total Kurang
+                        </th>
+                        <th className="px-3 py-3 text-center text-sm font-semibold text-gray-900 border-r min-w-[80px]">
+                          Hari Kerja
+                        </th>
+                        <th className="px-3 py-3 text-center text-sm font-semibold text-gray-900 border-r min-w-[90px]">
+                          Expected
+                        </th>
+                        <th className="px-3 py-3 text-center text-sm font-semibold text-gray-900 border-r min-w-[80px]">
+                          Actual
+                        </th>
+                        <th className="px-3 py-3 text-center text-sm font-semibold text-gray-900 border-r min-w-[80px]">
+                          Overtime
+                        </th>
+                        <th className="px-3 py-3 text-center text-sm font-semibold text-gray-900 border-r min-w-[80px]">
+                          Efisiensi
+                        </th>
+                        
+                        {/* Daily Grid Columns */}
+                        {workingDays.map(date => (
+                          <th key={format(date, 'yyyy-MM-dd')} className="px-2 py-3 text-center text-sm font-semibold text-gray-900 border-r min-w-[50px]">
+                            <div>{format(date, 'd')}</div>
+                            <div className="text-xs text-gray-500 font-normal">
+                              {format(date, 'EEE')}
+                            </div>
+                          </th>
                         ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="sticky left-0 bg-gray-50 px-4 py-3 text-left text-sm font-semibold text-gray-900 border-r">
-                              Nama Karyawan
-                            </th>
-                            <th className="px-3 py-3 text-center text-sm font-semibold text-gray-900 border-r min-w-[120px]">
-                              Total Kurang Jam
-                            </th>
-                            <th className="px-3 py-3 text-center text-sm font-semibold text-gray-900 border-r">
-                              Hari Kerja
-                            </th>
-                            {workingDays.map(date => (
-                              <th key={format(date, 'yyyy-MM-dd')} className="px-2 py-3 text-center text-sm font-semibold text-gray-900 border-r min-w-[50px]">
-                                <div>{format(date, 'd')}</div>
-                                <div className="text-xs text-gray-500 font-normal">
-                                  {format(date, 'EEE')}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {gridData.map((user) => (
+                        <tr key={user.userId} className="hover:bg-gray-50">
+                          {/* Summary Data */}
+                          <td className="sticky left-0 bg-white px-4 py-3 text-sm font-medium text-gray-900 border-r">
+                            {user.userName}
+                          </td>
+                          <td className="px-3 py-3 text-center border-r">
+                            {user.totalMissingHours > 0 ? (
+                              <Badge variant="destructive" className="text-xs">
+                                -{user.totalMissingHours}h
+                              </Badge>
+                            ) : (
+                              <Badge variant="default" className="text-xs">
+                                0h
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 text-center text-sm text-gray-900 border-r">
+                            {user.workingDays}
+                          </td>
+                          <td className="px-3 py-3 text-center text-sm text-gray-900 border-r">
+                            <span className="font-mono">{user.totalExpectedHours}h</span>
+                          </td>
+                          <td className="px-3 py-3 text-center text-sm text-gray-900 border-r">
+                            <span className="font-mono">{user.totalActualHours}h</span>
+                          </td>
+                          <td className="px-3 py-3 text-center border-r">
+                            {user.overtimeHours > 0 ? (
+                              <span className="font-mono text-green-600">+{user.overtimeHours}h</span>
+                            ) : (
+                              <span className="text-gray-400">0h</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 text-center border-r">
+                            {getEfficiencyBadge(user.efficiency)}
+                          </td>
+                          
+                          {/* Daily Grid Data */}
+                          {workingDays.map(date => {
+                            const dateStr = format(date, 'yyyy-MM-dd');
+                            const dayData = user.dailyData[dateStr];
+                            return (
+                              <td key={dateStr} className="px-2 py-3 text-center border-r">
+                                <div className={`inline-flex items-center justify-center w-8 h-8 rounded text-xs font-medium border ${getCellStyle(dayData)}`}>
+                                  {getCellContent(dayData)}
                                 </div>
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                          {gridData.map((user) => (
-                            <tr key={user.userId} className="hover:bg-gray-50">
-                              <td className="sticky left-0 bg-white px-4 py-3 text-sm font-medium text-gray-900 border-r">
-                                {user.userName}
                               </td>
-                              <td className="px-3 py-3 text-center border-r">
-                                {user.totalMissingHours > 0 ? (
-                                  <Badge variant="destructive" className="text-xs">
-                                    -{user.totalMissingHours}h
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="default" className="text-xs">
-                                    0h
-                                  </Badge>
-                                )}
-                              </td>
-                              <td className="px-3 py-3 text-center text-sm text-gray-900 border-r">
-                                {user.workingDays}
-                              </td>
-                              {workingDays.map(date => {
-                                const dateStr = format(date, 'yyyy-MM-dd');
-                                const dayData = user.dailyData[dateStr];
-                                return (
-                                  <td key={dateStr} className="px-2 py-3 text-center border-r">
-                                    <div className={`inline-flex items-center justify-center w-8 h-8 rounded text-xs font-medium border ${getCellStyle(dayData)}`}>
-                                      {getCellContent(dayData)}
-                                    </div>
-                                  </td>
-                                );
-                              })}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-              {/* Summary Statistics */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Ringkasan {format(currentMonth, 'MMMM yyyy')}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-600">
-                        {gridData.length}
-                      </div>
-                      <div className="text-sm text-gray-600">Total Karyawan</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-red-600">
-                        {gridData.reduce((sum, user) => sum + user.totalMissingHours, 0).toFixed(1)}h
-                      </div>
-                      <div className="text-sm text-gray-600">Total Kekurangan Jam</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-600">
-                        {gridData.filter(user => user.totalMissingHours === 0).length}
-                      </div>
-                      <div className="text-sm text-gray-600">Karyawan Tanpa Kekurangan</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-gray-800">
-                        {workingDays.length}
-                      </div>
-                      <div className="text-sm text-gray-600">Hari Kerja</div>
-                    </div>
+          {/* Summary Statistics */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Ringkasan {format(currentMonth, 'MMMM yyyy')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {gridData.length}
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                  <div className="text-sm text-gray-600">Total Karyawan</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-red-600">
+                    {gridData.reduce((sum, user) => sum + user.totalMissingHours, 0).toFixed(1)}h
+                  </div>
+                  <div className="text-sm text-gray-600">Total Kekurangan Jam</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {gridData.filter(user => user.totalMissingHours === 0).length}
+                  </div>
+                  <div className="text-sm text-gray-600">Karyawan Tanpa Kekurangan</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-800">
+                    {workingDays.length}
+                  </div>
+                  <div className="text-sm text-gray-600">Hari Kerja</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="reports" className="space-y-6">
