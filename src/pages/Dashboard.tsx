@@ -783,35 +783,6 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-
-      {/* Footer */}
-      <div className="bg-gray-900 py-8 mt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center space-y-3">
-            <p className="text-sm text-gray-500">
-              {t('landing.poweredBy')}
-            </p>
-            <p className="text-base font-semibold text-white">
-              {t('landing.collaborationText')}
-            </p>
-            <div className="flex items-center justify-center space-x-4">
-              <div className="text-center">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg flex items-center justify-center mb-1">
-                  <span className="text-white font-bold text-sm">C1</span>
-                </div>
-                <p className="text-xs text-gray-400">Cluster 1</p>
-              </div>
-              <div className="text-gray-400">×</div>
-              <div className="text-center">
-                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-700 rounded-lg flex items-center justify-center mb-1">
-                  <span className="text-white font-bold text-sm">ST</span>
-                </div>
-                <p className="text-xs text-gray-400">Symbiotech</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

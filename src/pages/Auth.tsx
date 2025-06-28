@@ -160,33 +160,6 @@ export default function Auth() {
               </div>
             </div>
           </div>
-
-          {/* Collaboration Footer in Auth Page */}
-          <div className="mt-12 pt-8 border-t border-gray-200">
-            <div className="text-center space-y-3">
-              <p className="text-sm text-gray-500">
-                {t('landing.poweredBy')}
-              </p>
-              <p className="text-base font-semibold text-gray-700">
-                {t('landing.collaborationText')}
-              </p>
-              <div className="flex items-center justify-center space-x-4">
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg flex items-center justify-center mb-1">
-                    <span className="text-white font-bold text-sm">C1</span>
-                  </div>
-                  <p className="text-xs text-gray-400">Cluster 1</p>
-                </div>
-                <div className="text-gray-400">×</div>
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-700 rounded-lg flex items-center justify-center mb-1">
-                    <span className="text-white font-bold text-sm">ST</span>
-                  </div>
-                  <p className="text-xs text-gray-400">Symbiotech</p>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Right side - Auth forms */}
