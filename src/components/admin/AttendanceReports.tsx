@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Download, FileText, Filter, BarChart3 } from 'lucide-react';
+import { Download, FileText, Filter, BarChart3, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { Database } from '@/integrations/supabase/types';
 import { AnalyticsCards } from '@/components/analytics/AnalyticsCards';
@@ -19,11 +18,24 @@ import { AnalyticsCards } from '@/components/analytics/AnalyticsCards';
 type AttendanceStatus = Database['public']['Enums']['attendance_status'];
 type AttendanceMethod = Database['public']['Enums']['attendance_method'];
 
+interface HoursSummary {
+  userId: string;
+  userName: string;
+  workingDays: number;
+  totalExpectedHours: number;
+  totalActualHours: number;
+  missingHours: number;
+  overtimeHours: number;
+  efficiency: number;
+  averageHoursPerDay: number;
+}
+
 export const AttendanceReports = () => {
   const { toast } = useToast();
   const { t } = useLanguage();
   const [attendance, setAttendance] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [hoursSummary, setHoursSummary] = useState<HoursSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     startDate: format(new Date(), 'yyyy-MM-01'),
@@ -61,7 +73,13 @@ export const AttendanceReports = () => {
       .from('absensi')
       .select(`
         *,
-        profiles:user_id (name)
+        profiles:user_id (name),
+        shift:shift_id (
+          id,
+          nama_shift,
+          jam_masuk,
+          jam_keluar
+        )
       `)
       .gte('waktu', `${filters.startDate}T00:00:00.000Z`)
       .lte('waktu', `${filters.endDate}T23:59:59.999Z`)
@@ -83,8 +101,86 @@ export const AttendanceReports = () => {
 
     if (!error && data) {
       setAttendance(data);
+      calculateHoursSummary(data);
     }
     setLoading(false);
+  };
+
+  const calculateHoursSummary = (attendanceData: any[]) => {
+    const userSummaries = new Map<string, HoursSummary>();
+
+    // Group attendance by user
+    const userAttendance = attendanceData.reduce((acc, record) => {
+      const userId = record.user_id;
+      if (!acc[userId]) {
+        acc[userId] = [];
+      }
+      acc[userId].push(record);
+      return acc;
+    }, {} as Record<string, any[]>);
+
+    // Calculate summary for each user
+    Object.entries(userAttendance).forEach(([userId, records]) => {
+      const userName = records[0]?.profiles?.name || 'Unknown';
+      let totalExpectedHours = 0;
+      let totalActualHours = 0;
+      let workingDays = 0;
+
+      records.forEach(record => {
+        if (record.shift && record.shift.jam_masuk && record.shift.jam_keluar) {
+          workingDays++;
+          
+          // Calculate expected hours from shift
+          const expectedHours = calculateHoursDifference(
+            record.shift.jam_masuk,
+            record.shift.jam_keluar
+          );
+          totalExpectedHours += expectedHours;
+
+          // Calculate actual hours if both check-in and check-out exist
+          if (record.waktu && record.clock_out_time) {
+            const actualHours = calculateHoursDifference(
+              format(new Date(record.waktu), 'HH:mm'),
+              format(new Date(record.clock_out_time), 'HH:mm')
+            );
+            totalActualHours += actualHours;
+          }
+          // If no clock out, consider it as incomplete (0 actual hours for that day)
+        }
+      });
+
+      const missingHours = Math.max(0, totalExpectedHours - totalActualHours);
+      const overtimeHours = Math.max(0, totalActualHours - totalExpectedHours);
+      const efficiency = totalExpectedHours > 0 ? (totalActualHours / totalExpectedHours) * 100 : 0;
+      const averageHoursPerDay = workingDays > 0 ? totalActualHours / workingDays : 0;
+
+      userSummaries.set(userId, {
+        userId,
+        userName,
+        workingDays,
+        totalExpectedHours: Math.round(totalExpectedHours * 100) / 100,
+        totalActualHours: Math.round(totalActualHours * 100) / 100,
+        missingHours: Math.round(missingHours * 100) / 100,
+        overtimeHours: Math.round(overtimeHours * 100) / 100,
+        efficiency: Math.round(efficiency * 100) / 100,
+        averageHoursPerDay: Math.round(averageHoursPerDay * 100) / 100
+      });
+    });
+
+    setHoursSummary(Array.from(userSummaries.values()));
+  };
+
+  const calculateHoursDifference = (startTime: string, endTime: string): number => {
+    const start = new Date(`2000-01-01 ${startTime}`);
+    const end = new Date(`2000-01-01 ${endTime}`);
+    
+    // Handle overnight shifts
+    if (end < start) {
+      end.setDate(end.getDate() + 1);
+    }
+    
+    const diffMs = end.getTime() - start.getTime();
+    return diffMs / (1000 * 60 * 60); // Convert to hours
   };
 
   const exportToCSV = () => {
@@ -118,6 +214,48 @@ export const AttendanceReports = () => {
     });
   };
 
+  const exportHoursToCSV = () => {
+    const headers = [
+      t('general.name'),
+      t('admin.workingDays'),
+      t('admin.totalExpectedHours'),
+      t('admin.totalActualHours'),
+      t('admin.missingHours'),
+      t('admin.overtimeHours'),
+      t('admin.averageHoursPerDay'),
+      t('admin.hoursEfficiency') + ' (%)'
+    ];
+    
+    const csvData = hoursSummary.map(summary => [
+      summary.userName,
+      summary.workingDays.toString(),
+      summary.totalExpectedHours.toString(),
+      summary.totalActualHours.toString(),
+      summary.missingHours.toString(),
+      summary.overtimeHours.toString(),
+      summary.averageHoursPerDay.toString(),
+      summary.efficiency.toString()
+    ]);
+
+    const csvContent = [headers, ...csvData]
+      .map(row => row.map(field => `"${field}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `hours-report-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: t('general.success'),
+      description: t('admin.exportSuccess'),
+    });
+  };
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, any> = {
       'HADIR': 'default',
@@ -136,6 +274,12 @@ export const AttendanceReports = () => {
     );
   };
 
+  const getEfficiencyBadge = (efficiency: number) => {
+    if (efficiency >= 90) return <Badge variant="default">{efficiency}%</Badge>;
+    if (efficiency >= 75) return <Badge variant="secondary">{efficiency}%</Badge>;
+    return <Badge variant="destructive">{efficiency}%</Badge>;
+  };
+
   const resetFilters = () => {
     setFilters({
       startDate: format(new Date(), 'yyyy-MM-01'),
@@ -149,10 +293,14 @@ export const AttendanceReports = () => {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="analytics" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="analytics" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             Analytics Dashboard
+          </TabsTrigger>
+          <TabsTrigger value="hours" className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            {t('admin.hoursReport')}
           </TabsTrigger>
           <TabsTrigger value="reports" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
@@ -162,6 +310,151 @@ export const AttendanceReports = () => {
 
         <TabsContent value="analytics">
           <AnalyticsCards />
+        </TabsContent>
+
+        <TabsContent value="hours" className="space-y-6">
+          {/* Filters */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Filter className="h-5 w-5" />
+                {t('admin.filterExport')}
+              </CardTitle>
+              <CardDescription>
+                {t('admin.hoursReportDescription')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="startDate">{t('admin.startDate')}</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={filters.startDate}
+                    onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="endDate">{t('admin.endDate')}</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={filters.endDate}
+                    onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>{t('admin.employee')}</Label>
+                  <Select value={filters.userId} onValueChange={(value) => setFilters({ ...filters, userId: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('admin.allEmployees')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t('admin.allEmployees')}</SelectItem>
+                      {users.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>&nbsp;</Label>
+                  <Button variant="outline" onClick={resetFilters} className="w-full">
+                    {t('admin.reset')}
+                  </Button>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>&nbsp;</Label>
+                  <Button onClick={exportHoursToCSV} className="w-full">
+                    <Download className="h-4 w-4 mr-2" />
+                    {t('admin.csv')}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Hours Summary */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                {t('admin.employeeHoursSummary')}
+              </CardTitle>
+              <CardDescription>
+                {hoursSummary.length} {t('admin.employee').toLowerCase()} ditemukan
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="animate-pulse space-y-4">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="h-12 bg-gray-200 rounded"></div>
+                  ))}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t('admin.employee')}</TableHead>
+                        <TableHead className="text-center">{t('admin.workingDays')}</TableHead>
+                        <TableHead className="text-center">{t('admin.expectedHours')}</TableHead>
+                        <TableHead className="text-center">{t('admin.actualHours')}</TableHead>
+                        <TableHead className="text-center">{t('admin.missingHours')}</TableHead>
+                        <TableHead className="text-center">{t('admin.overtimeHours')}</TableHead>
+                        <TableHead className="text-center">{t('admin.averageHoursPerDay')}</TableHead>
+                        <TableHead className="text-center">{t('admin.hoursEfficiency')}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {hoursSummary.map((summary) => (
+                        <TableRow key={summary.userId}>
+                          <TableCell className="font-medium">
+                            {summary.userName}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {summary.workingDays}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className="font-mono">{summary.totalExpectedHours}h</span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className="font-mono">{summary.totalActualHours}h</span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {summary.missingHours > 0 ? (
+                              <span className="font-mono text-red-600">-{summary.missingHours}h</span>
+                            ) : (
+                              <span className="text-gray-400">0h</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {summary.overtimeHours > 0 ? (
+                              <span className="font-mono text-green-600">+{summary.overtimeHours}h</span>
+                            ) : (
+                              <span className="text-gray-400">0h</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className="font-mono">{summary.averageHoursPerDay}h</span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {getEfficiencyBadge(summary.efficiency)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="reports" className="space-y-6">

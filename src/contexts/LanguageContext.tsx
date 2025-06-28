@@ -244,6 +244,25 @@ const translations = {
     'admin.date': 'Tanggal',
     'admin.exportSuccess': 'Laporan berhasil diekspor!',
     
+    // Hours Report - NEW TRANSLATIONS
+    'admin.hoursReport': 'Laporan Jam Kerja',
+    'admin.hoursReportDescription': 'Analisis jam kerja karyawan berdasarkan shift dan waktu aktual',
+    'admin.expectedHours': 'Jam Diharapkan',
+    'admin.actualHours': 'Jam Aktual',
+    'admin.missingHours': 'Kekurangan Jam',
+    'admin.overtimeHours': 'Kelebihan Jam',
+    'admin.workingDays': 'Hari Kerja',
+    'admin.totalExpectedHours': 'Total Jam Diharapkan',
+    'admin.totalActualHours': 'Total Jam Aktual',
+    'admin.totalMissingHours': 'Total Kekurangan Jam',
+    'admin.totalOvertimeHours': 'Total Kelebihan Jam',
+    'admin.averageHoursPerDay': 'Rata-rata Jam per Hari',
+    'admin.hoursEfficiency': 'Efisiensi Jam Kerja',
+    'admin.noClockOut': 'Belum Clock Out',
+    'admin.incomplete': 'Tidak Lengkap',
+    'admin.hoursAnalysis': 'Analisis Jam Kerja',
+    'admin.employeeHoursSummary': 'Ringkasan Jam Kerja Karyawan',
+    
     // Admin User Management
     'admin.userManagement': 'Manajemen Pengguna',
     'admin.manageUsers': 'Kelola akun pengguna dan peran',
@@ -602,6 +621,25 @@ const translations = {
     'admin.recordsFound': 'records found',
     'admin.date': 'Date',
     'admin.exportSuccess': 'Report exported successfully!',
+    
+    // Hours Report - NEW TRANSLATIONS
+    'admin.hoursReport': 'Hours Report',
+    'admin.hoursReportDescription': 'Analyze employee working hours based on shifts and actual time',
+    'admin.expectedHours': 'Expected Hours',
+    'admin.actualHours': 'Actual Hours',
+    'admin.missingHours': 'Missing Hours',
+    'admin.overtimeHours': 'Overtime Hours',
+    'admin.workingDays': 'Working Days',
+    'admin.totalExpectedHours': 'Total Expected Hours',
+    'admin.totalActualHours': 'Total Actual Hours',
+    'admin.totalMissingHours': 'Total Missing Hours',
+    'admin.totalOvertimeHours': 'Total Overtime Hours',
+    'admin.averageHoursPerDay': 'Average Hours per Day',
+    'admin.hoursEfficiency': 'Hours Efficiency',
+    'admin.noClockOut': 'No Clock Out',
+    'admin.incomplete': 'Incomplete',
+    'admin.hoursAnalysis': 'Hours Analysis',
+    'admin.employeeHoursSummary': 'Employee Hours Summary',
     
     // Admin User Management
     'admin.userManagement': 'User Management',
