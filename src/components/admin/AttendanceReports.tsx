@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Download, FileText, Filter, BarChart3, Clock, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { Download, FileText, Filter, BarChart3, Clock, ChevronLeft, ChevronRight, Calendar, Camera, ExternalLink } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isWeekend } from 'date-fns';
 import { Database } from '@/integrations/supabase/types';
 import { AnalyticsCards } from '@/components/analytics/AnalyticsCards';
@@ -48,6 +48,12 @@ interface UserDailyData {
   workingDays: number;
 }
 
+// Koordinat Puskesmas Kunjang (contoh koordinat - sesuaikan dengan koordinat sebenarnya)
+const PUSKESMAS_KUNJANG_COORDS = {
+  latitude: -6.9175, // Ganti dengan koordinat sebenarnya
+  longitude: 107.6191 // Ganti dengan koordinat sebenarnya
+};
+
 export const AttendanceReports = () => {
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -81,6 +87,47 @@ export const AttendanceReports = () => {
   useEffect(() => {
     fetchGridData();
   }, [currentMonth, filters.userId]);
+
+  // Function to calculate distance between two coordinates
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371e3; // Earth's radius in meters
+    const φ1 = lat1 * Math.PI/180;
+    const φ2 = lat2 * Math.PI/180;
+    const Δφ = (lat2-lat1) * Math.PI/180;
+    const Δλ = (lon2-lon1) * Math.PI/180;
+
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    return R * c; // in metres
+  };
+
+  // Function to get distance from Puskesmas Kunjang
+  const getDistanceFromPuskesmas = (lokasi: string | null): string => {
+    if (!lokasi) return '-';
+    
+    try {
+      const [lat, lng] = lokasi.split(',').map(Number);
+      if (isNaN(lat) || isNaN(lng)) return '-';
+      
+      const distance = calculateDistance(
+        lat, 
+        lng, 
+        PUSKESMAS_KUNJANG_COORDS.latitude, 
+        PUSKESMAS_KUNJANG_COORDS.longitude
+      );
+      
+      if (distance < 1000) {
+        return `${Math.round(distance)} m`;
+      } else {
+        return `${(distance / 1000).toFixed(2)} km`;
+      }
+    } catch (error) {
+      return '-';
+    }
+  };
 
   const fetchUsers = async () => {
     const { data, error } = await supabase
@@ -336,14 +383,25 @@ export const AttendanceReports = () => {
   };
 
   const exportToCSV = () => {
-    const headers = [t('general.name'), t('admin.date'), t('general.time'), t('attendance.status'), t('general.method'), t('general.location'), t('admin.reason')];
+    const headers = [
+      t('general.name'), 
+      t('admin.date'), 
+      t('general.time'), 
+      t('attendance.status'), 
+      t('general.method'), 
+      'Jarak dari Puskesmas Kunjang',
+      'Link Foto',
+      t('admin.reason')
+    ];
+    
     const csvData = attendance.map(record => [
       record.profiles?.name || 'Unknown',
       format(new Date(record.waktu), 'yyyy-MM-dd'),
       format(new Date(record.waktu), 'HH:mm:ss'),
       t(`status.${record.status}`),
       record.metode === 'absen' ? t('admin.regular') : t('admin.makeup'),
-      record.lokasi || '',
+      getDistanceFromPuskesmas(record.lokasi),
+      record.photo_url || 'Tidak ada foto',
       record.alasan || ''
     ]);
 
@@ -762,7 +820,7 @@ export const AttendanceReports = () => {
                 {t('admin.filterExport')}
               </CardTitle>
               <CardDescription>
-                {t('admin.filterAttendanceData')}
+                {t('admin.filterAttendanceData')} - Termasuk jarak dari Puskesmas Kunjang dan foto absensi
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -857,7 +915,7 @@ export const AttendanceReports = () => {
                     {t('admin.attendanceReport')}
                   </CardTitle>
                   <CardDescription>
-                    {attendance.length} {t('admin.recordsFound')}
+                    {attendance.length} {t('admin.recordsFound')} - Dengan jarak dari Puskesmas Kunjang dan foto absensi
                   </CardDescription>
                 </div>
               </div>
@@ -879,7 +937,8 @@ export const AttendanceReports = () => {
                         <TableHead>{t('general.time')}</TableHead>
                         <TableHead>{t('attendance.status')}</TableHead>
                         <TableHead>{t('general.method')}</TableHead>
-                        <TableHead>{t('general.location')}</TableHead>
+                        <TableHead>Jarak dari Puskesmas Kunjang</TableHead>
+                        <TableHead>Foto Absensi</TableHead>
                         <TableHead>{t('admin.reason')}</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -902,9 +961,30 @@ export const AttendanceReports = () => {
                             {getMethodBadge(record.metode)}
                           </TableCell>
                           <TableCell>
-                            <div className="max-w-xs truncate text-sm">
-                              {record.lokasi || '-'}
+                            <div className="text-sm">
+                              {getDistanceFromPuskesmas(record.lokasi)}
                             </div>
+                          </TableCell>
+                          <TableCell>
+                            {record.photo_url ? (
+                              <div className="flex items-center gap-2">
+                                <Camera className="h-4 w-4 text-green-600" />
+                                <a 
+                                  href={record.photo_url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+                                >
+                                  Lihat Foto
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2 text-gray-400">
+                                <Camera className="h-4 w-4" />
+                                <span className="text-sm">Tidak ada foto</span>
+                              </div>
+                            )}
                           </TableCell>
                           <TableCell>
                             <div className="max-w-xs truncate text-sm">
