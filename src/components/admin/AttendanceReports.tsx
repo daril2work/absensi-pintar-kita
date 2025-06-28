@@ -10,10 +10,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Download, FileText, Filter, BarChart3, Clock } from 'lucide-react';
+import { Download, FileText, Filter, BarChart3, Clock, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { Database } from '@/integrations/supabase/types';
 import { AnalyticsCards } from '@/components/analytics/AnalyticsCards';
+import { HoursCalendarView } from '@/components/admin/HoursCalendarView';
 
 type AttendanceStatus = Database['public']['Enums']['attendance_status'];
 type AttendanceMethod = Database['public']['Enums']['attendance_method'];
@@ -293,7 +294,7 @@ export const AttendanceReports = () => {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="analytics" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="analytics" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             Analytics Dashboard
@@ -301,6 +302,10 @@ export const AttendanceReports = () => {
           <TabsTrigger value="hours" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             {t('admin.hoursReport')}
+          </TabsTrigger>
+          <TabsTrigger value="calendar" className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            Calendar View
           </TabsTrigger>
           <TabsTrigger value="reports" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
@@ -455,6 +460,14 @@ export const AttendanceReports = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="calendar">
+          <HoursCalendarView 
+            selectedUserId={filters.userId}
+            startDate={filters.startDate}
+            endDate={filters.endDate}
+          />
         </TabsContent>
 
         <TabsContent value="reports" className="space-y-6">
