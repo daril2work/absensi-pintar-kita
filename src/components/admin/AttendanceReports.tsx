@@ -10,11 +10,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Download, FileText, Filter, BarChart3, Clock, Calendar, Grid3X3 } from 'lucide-react';
-import { format } from 'date-fns';
+import { Download, FileText, Filter, BarChart3, Clock, ChevronLeft, ChevronRight, Calendar, Grid3X3 } from 'lucide-react';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isWeekend } from 'date-fns';
 import { Database } from '@/integrations/supabase/types';
 import { AnalyticsCards } from '@/components/analytics/AnalyticsCards';
-import { DailyHoursGrid } from '@/components/admin/DailyHoursGrid';
 
 type AttendanceStatus = Database['public']['Enums']['attendance_status'];
 type AttendanceMethod = Database['public']['Enums']['attendance_method'];
@@ -29,6 +28,24 @@ interface HoursSummary {
   overtimeHours: number;
   efficiency: number;
   averageHoursPerDay: number;
+}
+
+interface DailyHourData {
+  date: string;
+  expectedHours: number;
+  actualHours: number;
+  missingHours: number;
+  hasAttendance: boolean;
+}
+
+interface UserDailyData {
+  userId: string;
+  userName: string;
+  dailyData: Record<string, DailyHourData>;
+  totalMissingHours: number;
+  totalExpectedHours: number;
+  totalActualHours: number;
+  workingDays: number;
 }
 
 export const AttendanceReports = () => {
@@ -46,6 +63,12 @@ export const AttendanceReports = () => {
     method: 'all' as AttendanceMethod | 'all'
   });
 
+  // Daily Grid State
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [gridData, setGridData] = useState<UserDailyData[]>([]);
+  const [workingDays, setWorkingDays] = useState<Date[]>([]);
+  const [gridLoading, setGridLoading] = useState(true);
+
   useEffect(() => {
     fetchUsers();
     fetchAttendanceData();
@@ -54,6 +77,10 @@ export const AttendanceReports = () => {
   useEffect(() => {
     fetchAttendanceData();
   }, [filters]);
+
+  useEffect(() => {
+    fetchGridData();
+  }, [currentMonth, filters.userId]);
 
   const fetchUsers = async () => {
     const { data, error } = await supabase
@@ -105,6 +132,130 @@ export const AttendanceReports = () => {
       calculateHoursSummary(data);
     }
     setLoading(false);
+  };
+
+  const fetchGridData = async () => {
+    setGridLoading(true);
+    
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(currentMonth);
+    
+    // Get all days in month excluding weekends (assuming weekends are non-working days)
+    const allDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+    const workingDaysInMonth = allDays.filter(day => !isWeekend(day));
+    setWorkingDays(workingDaysInMonth);
+
+    // Fetch users
+    let userQuery = supabase
+      .from('profiles')
+      .select('id, name')
+      .eq('role', 'user')
+      .order('name');
+
+    if (filters.userId && filters.userId !== 'all') {
+      userQuery = userQuery.eq('id', filters.userId);
+    }
+
+    const { data: users, error: usersError } = await userQuery;
+
+    if (usersError || !users) {
+      setGridLoading(false);
+      return;
+    }
+
+    // Fetch attendance data for the month
+    const { data: attendanceData, error: attendanceError } = await supabase
+      .from('absensi')
+      .select(`
+        *,
+        profiles:user_id (name),
+        shift:shift_id (
+          id,
+          nama_shift,
+          jam_masuk,
+          jam_keluar
+        )
+      `)
+      .gte('waktu', monthStart.toISOString())
+      .lte('waktu', monthEnd.toISOString())
+      .order('waktu');
+
+    if (attendanceError) {
+      setGridLoading(false);
+      return;
+    }
+
+    // Process data for each user
+    const processedData: UserDailyData[] = users.map(user => {
+      const userAttendance = (attendanceData || []).filter(record => record.user_id === user.id);
+      const dailyData: Record<string, DailyHourData> = {};
+      
+      let totalMissingHours = 0;
+      let totalExpectedHours = 0;
+      let totalActualHours = 0;
+      let workingDaysCount = 0;
+
+      // Process each working day
+      workingDaysInMonth.forEach(date => {
+        const dateStr = format(date, 'yyyy-MM-dd');
+        const dayAttendance = userAttendance.filter(record => {
+          const recordDate = format(new Date(record.waktu), 'yyyy-MM-dd');
+          return recordDate === dateStr;
+        });
+
+        let expectedHours = 0;
+        let actualHours = 0;
+
+        dayAttendance.forEach(record => {
+          if (record.shift && record.shift.jam_masuk && record.shift.jam_keluar) {
+            // Calculate expected hours from shift
+            expectedHours += calculateHoursDifference(
+              record.shift.jam_masuk,
+              record.shift.jam_keluar
+            );
+
+            // Calculate actual hours if both check-in and check-out exist
+            if (record.waktu && record.clock_out_time) {
+              actualHours += calculateHoursDifference(
+                format(new Date(record.waktu), 'HH:mm'),
+                format(new Date(record.clock_out_time), 'HH:mm')
+              );
+            }
+          }
+        });
+
+        const missingHours = Math.max(0, expectedHours - actualHours);
+        const hasAttendance = dayAttendance.length > 0;
+
+        if (hasAttendance) {
+          workingDaysCount++;
+          totalExpectedHours += expectedHours;
+          totalActualHours += actualHours;
+          totalMissingHours += missingHours;
+        }
+
+        dailyData[dateStr] = {
+          date: dateStr,
+          expectedHours: Math.round(expectedHours * 100) / 100,
+          actualHours: Math.round(actualHours * 100) / 100,
+          missingHours: Math.round(missingHours * 100) / 100,
+          hasAttendance
+        };
+      });
+
+      return {
+        userId: user.id,
+        userName: user.name,
+        dailyData,
+        totalMissingHours: Math.round(totalMissingHours * 100) / 100,
+        totalExpectedHours: Math.round(totalExpectedHours * 100) / 100,
+        totalActualHours: Math.round(totalActualHours * 100) / 100,
+        workingDays: workingDaysCount
+      };
+    });
+
+    setGridData(processedData);
+    setGridLoading(false);
   };
 
   const calculateHoursSummary = (attendanceData: any[]) => {
@@ -257,6 +408,53 @@ export const AttendanceReports = () => {
     });
   };
 
+  const exportGridToCSV = () => {
+    const headers = ['Nama', 'Total Kekurangan Jam', 'Hari Kerja', ...workingDays.map(date => format(date, 'd'))];
+    
+    const csvData = gridData.map(user => {
+      const row = [
+        user.userName,
+        user.totalMissingHours.toString(),
+        user.workingDays.toString()
+      ];
+      
+      // Add daily data
+      workingDays.forEach(date => {
+        const dateStr = format(date, 'yyyy-MM-dd');
+        const dayData = user.dailyData[dateStr];
+        if (dayData && dayData.hasAttendance) {
+          if (dayData.missingHours > 0) {
+            row.push(`-${dayData.missingHours}h`);
+          } else {
+            row.push('✓');
+          }
+        } else {
+          row.push('-');
+        }
+      });
+      
+      return row;
+    });
+
+    const csvContent = [headers, ...csvData]
+      .map(row => row.map(field => `"${field}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `daily-hours-grid-${format(currentMonth, 'yyyy-MM')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: t('general.success'),
+      description: t('admin.exportSuccess'),
+    });
+  };
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, any> = {
       'HADIR': 'default',
@@ -281,6 +479,30 @@ export const AttendanceReports = () => {
     return <Badge variant="destructive">{efficiency}%</Badge>;
   };
 
+  const getCellStyle = (dayData: DailyHourData) => {
+    if (!dayData.hasAttendance) {
+      return "bg-gray-100 text-gray-400";
+    }
+
+    if (dayData.missingHours > 0) {
+      return "bg-red-100 text-red-800 border-red-200";
+    }
+
+    return "bg-green-100 text-green-800 border-green-200";
+  };
+
+  const getCellContent = (dayData: DailyHourData) => {
+    if (!dayData.hasAttendance) {
+      return "-";
+    }
+
+    if (dayData.missingHours > 0) {
+      return `-${dayData.missingHours}h`;
+    }
+
+    return "✓";
+  };
+
   const resetFilters = () => {
     setFilters({
       startDate: format(new Date(), 'yyyy-MM-01'),
@@ -294,7 +516,7 @@ export const AttendanceReports = () => {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="analytics" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="analytics" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             Analytics Dashboard
@@ -302,10 +524,6 @@ export const AttendanceReports = () => {
           <TabsTrigger value="hours" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             {t('admin.hoursReport')}
-          </TabsTrigger>
-          <TabsTrigger value="daily-grid" className="flex items-center gap-2">
-            <Grid3X3 className="h-4 w-4" />
-            Grid Harian
           </TabsTrigger>
           <TabsTrigger value="reports" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
@@ -384,90 +602,277 @@ export const AttendanceReports = () => {
             </CardContent>
           </Card>
 
-          {/* Hours Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                {t('admin.employeeHoursSummary')}
-              </CardTitle>
-              <CardDescription>
-                {hoursSummary.length} {t('admin.employee').toLowerCase()} ditemukan
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="animate-pulse space-y-4">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="h-12 bg-gray-200 rounded"></div>
-                  ))}
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{t('admin.employee')}</TableHead>
-                        <TableHead className="text-center">{t('admin.workingDays')}</TableHead>
-                        <TableHead className="text-center">{t('admin.expectedHours')}</TableHead>
-                        <TableHead className="text-center">{t('admin.actualHours')}</TableHead>
-                        <TableHead className="text-center">{t('admin.missingHours')}</TableHead>
-                        <TableHead className="text-center">{t('admin.overtimeHours')}</TableHead>
-                        <TableHead className="text-center">{t('admin.averageHoursPerDay')}</TableHead>
-                        <TableHead className="text-center">{t('admin.hoursEfficiency')}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {hoursSummary.map((summary) => (
-                        <TableRow key={summary.userId}>
-                          <TableCell className="font-medium">
-                            {summary.userName}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {summary.workingDays}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <span className="font-mono">{summary.totalExpectedHours}h</span>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <span className="font-mono">{summary.totalActualHours}h</span>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {summary.missingHours > 0 ? (
-                              <span className="font-mono text-red-600">-{summary.missingHours}h</span>
-                            ) : (
-                              <span className="text-gray-400">0h</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {summary.overtimeHours > 0 ? (
-                              <span className="font-mono text-green-600">+{summary.overtimeHours}h</span>
-                            ) : (
-                              <span className="text-gray-400">0h</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <span className="font-mono">{summary.averageHoursPerDay}h</span>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {getEfficiencyBadge(summary.efficiency)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+          {/* Sub-tabs for Hours Report */}
+          <Tabs defaultValue="summary" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="summary" className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Ringkasan Jam Kerja
+              </TabsTrigger>
+              <TabsTrigger value="daily-grid" className="flex items-center gap-2">
+                <Grid3X3 className="h-4 w-4" />
+                Grid Harian
+              </TabsTrigger>
+            </TabsList>
 
-        <TabsContent value="daily-grid">
-          <DailyHoursGrid 
-            startDate={filters.startDate}
-            endDate={filters.endDate}
-            selectedUserId={filters.userId}
-          />
+            <TabsContent value="summary">
+              {/* Hours Summary */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="h-5 w-5" />
+                    {t('admin.employeeHoursSummary')}
+                  </CardTitle>
+                  <CardDescription>
+                    {hoursSummary.length} {t('admin.employee').toLowerCase()} ditemukan
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loading ? (
+                    <div className="animate-pulse space-y-4">
+                      {[...Array(5)].map((_, i) => (
+                        <div key={i} className="h-12 bg-gray-200 rounded"></div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>{t('admin.employee')}</TableHead>
+                            <TableHead className="text-center">{t('admin.workingDays')}</TableHead>
+                            <TableHead className="text-center">{t('admin.expectedHours')}</TableHead>
+                            <TableHead className="text-center">{t('admin.actualHours')}</TableHead>
+                            <TableHead className="text-center">{t('admin.missingHours')}</TableHead>
+                            <TableHead className="text-center">{t('admin.overtimeHours')}</TableHead>
+                            <TableHead className="text-center">{t('admin.averageHoursPerDay')}</TableHead>
+                            <TableHead className="text-center">{t('admin.hoursEfficiency')}</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {hoursSummary.map((summary) => (
+                            <TableRow key={summary.userId}>
+                              <TableCell className="font-medium">
+                                {summary.userName}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {summary.workingDays}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <span className="font-mono">{summary.totalExpectedHours}h</span>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <span className="font-mono">{summary.totalActualHours}h</span>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {summary.missingHours > 0 ? (
+                                  <span className="font-mono text-red-600">-{summary.missingHours}h</span>
+                                ) : (
+                                  <span className="text-gray-400">0h</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {summary.overtimeHours > 0 ? (
+                                  <span className="font-mono text-green-600">+{summary.overtimeHours}h</span>
+                                ) : (
+                                  <span className="text-gray-400">0h</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <span className="font-mono">{summary.averageHoursPerDay}h</span>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {getEfficiencyBadge(summary.efficiency)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="daily-grid">
+              {/* Daily Grid Header Controls */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Grid3X3 className="h-5 w-5" />
+                    Grid Harian Jam Kerja
+                  </CardTitle>
+                  <CardDescription>
+                    Grid harian menampilkan kekurangan jam kerja per karyawan per tanggal
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <div className="text-lg font-semibold min-w-[200px] text-center">
+                        {format(currentMonth, 'MMMM yyyy')}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    <Button onClick={exportGridToCSV} variant="outline">
+                      <Download className="h-4 w-4 mr-2" />
+                      Export Grid CSV
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Legend */}
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-6 text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-red-100 border border-red-200 rounded flex items-center justify-center text-red-800 text-xs font-bold">
+                        -2h
+                      </div>
+                      <span>Kekurangan Jam</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-green-100 border border-green-200 rounded flex items-center justify-center text-green-800 text-xs font-bold">
+                        ✓
+                      </div>
+                      <span>Jam Lengkap</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-gray-100 border border-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
+                        -
+                      </div>
+                      <span>Tidak Absen</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Grid Table */}
+              <Card>
+                <CardContent className="p-0">
+                  {gridLoading ? (
+                    <div className="p-6">
+                      <div className="animate-pulse space-y-4">
+                        {[...Array(5)].map((_, i) => (
+                          <div key={i} className="h-12 bg-gray-200 rounded"></div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="sticky left-0 bg-gray-50 px-4 py-3 text-left text-sm font-semibold text-gray-900 border-r">
+                              Nama Karyawan
+                            </th>
+                            <th className="px-3 py-3 text-center text-sm font-semibold text-gray-900 border-r min-w-[120px]">
+                              Total Kurang Jam
+                            </th>
+                            <th className="px-3 py-3 text-center text-sm font-semibold text-gray-900 border-r">
+                              Hari Kerja
+                            </th>
+                            {workingDays.map(date => (
+                              <th key={format(date, 'yyyy-MM-dd')} className="px-2 py-3 text-center text-sm font-semibold text-gray-900 border-r min-w-[50px]">
+                                <div>{format(date, 'd')}</div>
+                                <div className="text-xs text-gray-500 font-normal">
+                                  {format(date, 'EEE')}
+                                </div>
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {gridData.map((user) => (
+                            <tr key={user.userId} className="hover:bg-gray-50">
+                              <td className="sticky left-0 bg-white px-4 py-3 text-sm font-medium text-gray-900 border-r">
+                                {user.userName}
+                              </td>
+                              <td className="px-3 py-3 text-center border-r">
+                                {user.totalMissingHours > 0 ? (
+                                  <Badge variant="destructive" className="text-xs">
+                                    -{user.totalMissingHours}h
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="default" className="text-xs">
+                                    0h
+                                  </Badge>
+                                )}
+                              </td>
+                              <td className="px-3 py-3 text-center text-sm text-gray-900 border-r">
+                                {user.workingDays}
+                              </td>
+                              {workingDays.map(date => {
+                                const dateStr = format(date, 'yyyy-MM-dd');
+                                const dayData = user.dailyData[dateStr];
+                                return (
+                                  <td key={dateStr} className="px-2 py-3 text-center border-r">
+                                    <div className={`inline-flex items-center justify-center w-8 h-8 rounded text-xs font-medium border ${getCellStyle(dayData)}`}>
+                                      {getCellContent(dayData)}
+                                    </div>
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Summary Statistics */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Ringkasan {format(currentMonth, 'MMMM yyyy')}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {gridData.length}
+                      </div>
+                      <div className="text-sm text-gray-600">Total Karyawan</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-red-600">
+                        {gridData.reduce((sum, user) => sum + user.totalMissingHours, 0).toFixed(1)}h
+                      </div>
+                      <div className="text-sm text-gray-600">Total Kekurangan Jam</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600">
+                        {gridData.filter(user => user.totalMissingHours === 0).length}
+                      </div>
+                      <div className="text-sm text-gray-600">Karyawan Tanpa Kekurangan</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-gray-800">
+                        {workingDays.length}
+                      </div>
+                      <div className="text-sm text-gray-600">Hari Kerja</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         <TabsContent value="reports" className="space-y-6">
