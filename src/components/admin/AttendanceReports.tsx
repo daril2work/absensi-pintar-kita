@@ -46,9 +46,6 @@ interface UserDailyData {
   totalExpectedHours: number;
   totalActualHours: number;
   workingDays: number;
-  efficiency: number;
-  averageHoursPerDay: number;
-  overtimeHours: number;
 }
 
 export const AttendanceReports = () => {
@@ -246,10 +243,6 @@ export const AttendanceReports = () => {
         };
       });
 
-      const overtimeHours = Math.max(0, totalActualHours - totalExpectedHours);
-      const efficiency = totalExpectedHours > 0 ? (totalActualHours / totalExpectedHours) * 100 : 0;
-      const averageHoursPerDay = workingDaysCount > 0 ? totalActualHours / workingDaysCount : 0;
-
       return {
         userId: user.id,
         userName: user.name,
@@ -257,10 +250,7 @@ export const AttendanceReports = () => {
         totalMissingHours: Math.round(totalMissingHours * 100) / 100,
         totalExpectedHours: Math.round(totalExpectedHours * 100) / 100,
         totalActualHours: Math.round(totalActualHours * 100) / 100,
-        workingDays: workingDaysCount,
-        efficiency: Math.round(efficiency * 100) / 100,
-        averageHoursPerDay: Math.round(averageHoursPerDay * 100) / 100,
-        overtimeHours: Math.round(overtimeHours * 100) / 100
+        workingDays: workingDaysCount
       };
     });
 
@@ -381,11 +371,8 @@ export const AttendanceReports = () => {
       'Nama',
       'Total Kekurangan Jam',
       'Hari Kerja',
-      'Expected Hours',
-      'Actual Hours',
-      'Overtime Hours',
-      'Efficiency (%)',
-      'Avg Hours/Day',
+      'Expected Hours (Target Jam)',
+      'Actual Hours (Jam Aktual)',
       ...workingDays.map(date => format(date, 'd'))
     ];
     
@@ -395,10 +382,7 @@ export const AttendanceReports = () => {
         user.totalMissingHours.toString(),
         user.workingDays.toString(),
         user.totalExpectedHours.toString(),
-        user.totalActualHours.toString(),
-        user.overtimeHours.toString(),
-        user.efficiency.toString(),
-        user.averageHoursPerDay.toString()
+        user.totalActualHours.toString()
       ];
       
       // Add daily data
@@ -454,12 +438,6 @@ export const AttendanceReports = () => {
         {method === 'absen' ? t('admin.regular') : t('admin.makeup')}
       </Badge>
     );
-  };
-
-  const getEfficiencyBadge = (efficiency: number) => {
-    if (efficiency >= 90) return <Badge variant="default">{efficiency}%</Badge>;
-    if (efficiency >= 75) return <Badge variant="secondary">{efficiency}%</Badge>;
-    return <Badge variant="destructive">{efficiency}%</Badge>;
   };
 
   const getCellStyle = (dayData: DailyHourData) => {
@@ -642,7 +620,8 @@ export const AttendanceReports = () => {
                 Laporan Jam Kerja & Grid Harian
               </CardTitle>
               <CardDescription>
-                Ringkasan jam kerja dengan detail harian per karyawan
+                Ringkasan jam kerja dengan detail harian per karyawan. 
+                <strong> Expected</strong> = Target jam kerja berdasarkan shift yang dijadwalkan.
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
@@ -669,17 +648,13 @@ export const AttendanceReports = () => {
                         <th className="px-3 py-3 text-center text-sm font-semibold text-gray-900 border-r min-w-[80px]">
                           Hari Kerja
                         </th>
+                        <th className="px-3 py-3 text-center text-sm font-semibold text-gray-900 border-r min-w-[100px]">
+                          <div>Expected</div>
+                          <div className="text-xs font-normal text-gray-600">(Target Jam)</div>
+                        </th>
                         <th className="px-3 py-3 text-center text-sm font-semibold text-gray-900 border-r min-w-[90px]">
-                          Expected
-                        </th>
-                        <th className="px-3 py-3 text-center text-sm font-semibold text-gray-900 border-r min-w-[80px]">
-                          Actual
-                        </th>
-                        <th className="px-3 py-3 text-center text-sm font-semibold text-gray-900 border-r min-w-[80px]">
-                          Overtime
-                        </th>
-                        <th className="px-3 py-3 text-center text-sm font-semibold text-gray-900 border-r min-w-[80px]">
-                          Efisiensi
+                          <div>Actual</div>
+                          <div className="text-xs font-normal text-gray-600">(Jam Aktual)</div>
                         </th>
                         
                         {/* Daily Grid Columns */}
@@ -719,16 +694,6 @@ export const AttendanceReports = () => {
                           </td>
                           <td className="px-3 py-3 text-center text-sm text-gray-900 border-r">
                             <span className="font-mono">{user.totalActualHours}h</span>
-                          </td>
-                          <td className="px-3 py-3 text-center border-r">
-                            {user.overtimeHours > 0 ? (
-                              <span className="font-mono text-green-600">+{user.overtimeHours}h</span>
-                            ) : (
-                              <span className="text-gray-400">0h</span>
-                            )}
-                          </td>
-                          <td className="px-3 py-3 text-center border-r">
-                            {getEfficiencyBadge(user.efficiency)}
                           </td>
                           
                           {/* Daily Grid Data */}
