@@ -309,6 +309,18 @@ const translations = {
     'admin.makeupRequestApproved': 'Permintaan make-up disetujui dan catatan absensi dibuat!',
     'admin.makeupRequestRejected': 'Permintaan make-up ditolak.',
     
+    // Makeup Request Dialog
+    'makeup.requestMakeup': 'Ajukan Make-up',
+    'makeup.requestMakeupTime': 'Ajukan Waktu Make-up',
+    'makeup.requestMakeupDescription': 'Ajukan permintaan untuk absensi yang terlewat. Admin akan meninjau dan menyetujui.',
+    'makeup.dateOfMissedAttendance': 'Tanggal Absen yang Terlewat',
+    'makeup.reasonPlaceholder': 'Jelaskan mengapa Anda melewatkan absensi...',
+    'makeup.supportingDocumentOptional': 'URL Dokumen Pendukung (Opsional)',
+    'makeup.documentUrlPlaceholder': 'https://contoh.com/dokumen.pdf',
+    'makeup.submitting': 'Mengirim...',
+    'makeup.submitRequest': 'Kirim Permintaan',
+    'makeup.requestSubmittedSuccess': 'Permintaan make-up berhasil diajukan!',
+    
     // Status
     'status.HADIR': 'HADIR',
     'status.TERLAMBAT': 'TERLAMBAT',
@@ -652,6 +664,18 @@ const translations = {
     'admin.approve': 'Approve',
     'admin.makeupRequestApproved': 'Make-up request approved and attendance record created!',
     'admin.makeupRequestRejected': 'Make-up request rejected.',
+    
+    // Makeup Request Dialog
+    'makeup.requestMakeup': 'Request Make-up',
+    'makeup.requestMakeupTime': 'Request Make-up Time',
+    'makeup.requestMakeupDescription': 'Submit a request for missed attendance. Admin will review and approve.',
+    'makeup.dateOfMissedAttendance': 'Date of Missed Attendance',
+    'makeup.reasonPlaceholder': 'Explain why you missed the attendance...',
+    'makeup.supportingDocumentOptional': 'Supporting Document URL (Optional)',
+    'makeup.documentUrlPlaceholder': 'https://example.com/document.pdf',
+    'makeup.submitting': 'Submitting...',
+    'makeup.submitRequest': 'Submit Request',
+    'makeup.requestSubmittedSuccess': 'Make-up request submitted successfully!',
     
     // Status
     'status.HADIR': 'PRESENT',
