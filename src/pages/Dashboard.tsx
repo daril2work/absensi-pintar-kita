@@ -9,13 +9,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getLocationWithSecurity, isLocationValid } from '@/utils/location';
 import { captureHiddenPhoto, isCameraAvailable, generateFallbackPhoto } from '@/utils/camera';
-import { Clock, MapPin, Calendar, AlertCircle, LogOut, Shield, AlertTriangle, Camera, CameraOff, ClockIcon } from 'lucide-react';
+import { Clock, MapPin, Calendar, AlertCircle, LogOut, Shield, AlertTriangle, Camera, CameraOff, ClockIcon, Bug } from 'lucide-react';
 import { format } from 'date-fns';
 import { AttendanceHistory } from '@/components/AttendanceHistory';
 import { MakeupRequestDialog } from '@/components/MakeupRequestDialog';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { ShiftSelector } from '@/components/ShiftSelector';
 import { DashboardStats } from '@/components/DashboardStats';
+import { ConnectionDebugger } from '@/components/ConnectionDebugger';
 
 export default function Dashboard() {
   const { user, profile, signOut } = useAuth();
@@ -34,6 +35,7 @@ export default function Dashboard() {
   const [distanceToNearestValidLocation, setDistanceToNearestValidLocation] = useState<number | null>(null);
   const [nearestValidLocationName, setNearestValidLocationName] = useState<string>('');
   const [showClockOutButton, setShowClockOutButton] = useState(false);
+  const [showDebugger, setShowDebugger] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -84,29 +86,91 @@ export default function Dashboard() {
   };
 
   const fetchTodayAttendance = async () => {
-    const today = format(new Date(), 'yyyy-MM-dd');
-    const { data, error } = await supabase
-      .from('absensi')
-      .select('*')
-      .eq('user_id', user?.id)
-      .gte('waktu', `${today}T00:00:00.000Z`)
-      .lt('waktu', `${today}T23:59:59.999Z`);
+    try {
+      const today = format(new Date(), 'yyyy-MM-dd');
+      console.log('🔍 Fetching today attendance for:', today);
+      
+      const { data, error } = await supabase
+        .from('absensi')
+        .select(`
+          *,
+          shift:shift_id (
+            id,
+            nama_shift,
+            jam_masuk,
+            jam_keluar,
+            jenis_hari
+          )
+        `)
+        .eq('user_id', user?.id)
+        .gte('waktu', `${today}T00:00:00.000Z`)
+        .lt('waktu', `${today}T23:59:59.999Z`)
+        .order('waktu', { ascending: false })
+        .limit(1);
 
-    if (!error && data && data.length > 0) {
-      setTodayAttendance(data[0]);
-    } else {
-      setTodayAttendance(null);
+      if (error) {
+        console.error('❌ Error fetching attendance:', error);
+        toast({
+          title: 'Connection Error',
+          description: `Failed to fetch attendance: ${error.message}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data && data.length > 0) {
+        console.log('✅ Today attendance found:', data[0]);
+        setTodayAttendance(data[0]);
+        
+        // UPDATED: Set the shift from attendance record - this is the key fix
+        if (data[0].shift) {
+          console.log('✅ Setting shift from attendance:', data[0].shift);
+          setSelectedShift(data[0].shift);
+        }
+      } else {
+        console.log('ℹ️ No attendance record found for today');
+        setTodayAttendance(null);
+        // UPDATED: Clear selected shift if no attendance found
+        setSelectedShift(null);
+      }
+    } catch (error: any) {
+      console.error('💥 Exception in fetchTodayAttendance:', error);
+      toast({
+        title: 'Network Error',
+        description: `Failed to connect: ${error.message}`,
+        variant: "destructive",
+      });
     }
   };
 
   const fetchValidLocations = async () => {
-    const { data, error } = await supabase
-      .from('lokasi_valid')
-      .select('*')
-      .eq('aktif', true);
+    try {
+      console.log('🔍 Fetching valid locations...');
+      
+      const { data, error } = await supabase
+        .from('lokasi_valid')
+        .select('*')
+        .eq('aktif', true);
 
-    if (!error && data) {
-      setValidLocations(data);
+      if (error) {
+        console.error('❌ Error fetching locations:', error);
+        toast({
+          title: 'Connection Error',
+          description: `Failed to fetch locations: ${error.message}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('✅ Valid locations fetched:', data?.length || 0);
+      setValidLocations(data || []);
+    } catch (error: any) {
+      console.error('💥 Exception in fetchValidLocations:', error);
+      toast({
+        title: 'Network Error',
+        description: `Failed to connect: ${error.message}`,
+        variant: "destructive",
+      });
     }
   };
 
@@ -299,17 +363,21 @@ export default function Dashboard() {
         is_clocked_out: false
       };
 
+      console.log('💾 Saving attendance data:', attendanceData);
+
       const { error } = await supabase
         .from('absensi')
         .insert(attendanceData);
 
       if (error) {
+        console.error('❌ Error saving attendance:', error);
         toast({
           title: t('general.error'),
           description: error.message,
           variant: "destructive",
         });
       } else {
+        console.log('✅ Attendance saved successfully');
         const successMessage = photoStatus === 'photo_captured' 
           ? t('camera.attendanceWithPhoto')
           : t('camera.attendanceWithoutPhoto');
@@ -321,6 +389,7 @@ export default function Dashboard() {
         fetchTodayAttendance();
       }
     } catch (error: any) {
+      console.error('💥 Exception in handleCheckIn:', error);
       toast({
         title: t('general.error'),
         description: error.message,
@@ -514,6 +583,15 @@ export default function Dashboard() {
               <p className="text-gray-600">{t('dashboard.welcome')}, {profile?.name}</p>
             </div>
             <div className="flex items-center gap-4">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowDebugger(!showDebugger)}
+                className="flex items-center gap-2"
+              >
+                <Bug className="h-4 w-4" />
+                {showDebugger ? 'Hide' : 'Debug'}
+              </Button>
               <LanguageToggle />
               <Button variant="outline" onClick={signOut} className="flex items-center gap-2">
                 <LogOut className="h-4 w-4" />
@@ -528,6 +606,11 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main content */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Debug Panel */}
+            {showDebugger && (
+              <ConnectionDebugger />
+            )}
+
             {/* Security Warnings */}
             {securityWarnings.length > 0 && (
               <Alert variant={riskLevel === 'high' ? 'destructive' : 'default'}>
@@ -557,11 +640,12 @@ export default function Dashboard() {
               </Alert>
             )}
 
-            {/* Shift Selection */}
+            {/* Shift Selection - UPDATED: Pass currentSelectedShiftId prop */}
             <ShiftSelector 
               userId={user?.id || ''} 
               onShiftChange={setSelectedShift}
               disabled={!!todayAttendance}
+              currentSelectedShiftId={selectedShift?.id} // CRITICAL: This ensures the component shows the correct shift
             />
 
             {/* Current time and check-in/out */}
