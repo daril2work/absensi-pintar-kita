@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getLocationWithSecurity, isLocationValid } from '@/utils/location';
 import { captureHiddenPhoto, isCameraAvailable, generateFallbackPhoto } from '@/utils/camera';
-import { Clock, MapPin, Calendar, AlertCircle, LogOut, Shield, AlertTriangle, Camera, CameraOff, ClockIcon } from 'lucide-react';
+import { Clock, MapPin, Calendar, AlertCircle, LogOut, Shield, AlertTriangle, Camera, CameraOff, ClockIcon, Bug } from 'lucide-react';
 import { format } from 'date-fns';
 import { AttendanceHistory } from '@/components/AttendanceHistory';
 import { MakeupRequestDialog } from '@/components/MakeupRequestDialog';
@@ -587,7 +587,9 @@ export default function Dashboard() {
                 variant="outline" 
                 size="sm"
                 onClick={() => setShowDebugger(!showDebugger)}
+                className="flex items-center gap-2"
               >
+                <Bug className="h-4 w-4" />
                 {showDebugger ? 'Hide' : 'Debug'}
               </Button>
               <LanguageToggle />
