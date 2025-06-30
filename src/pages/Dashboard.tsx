@@ -122,7 +122,7 @@ export default function Dashboard() {
         console.log('✅ Today attendance found:', data[0]);
         setTodayAttendance(data[0]);
         
-        // Set the shift from attendance record
+        // UPDATED: Set the shift from attendance record - this is the key fix
         if (data[0].shift) {
           console.log('✅ Setting shift from attendance:', data[0].shift);
           setSelectedShift(data[0].shift);
@@ -130,6 +130,8 @@ export default function Dashboard() {
       } else {
         console.log('ℹ️ No attendance record found for today');
         setTodayAttendance(null);
+        // UPDATED: Clear selected shift if no attendance found
+        setSelectedShift(null);
       }
     } catch (error: any) {
       console.error('💥 Exception in fetchTodayAttendance:', error);
@@ -636,11 +638,12 @@ export default function Dashboard() {
               </Alert>
             )}
 
-            {/* Shift Selection */}
+            {/* Shift Selection - UPDATED: Pass currentSelectedShiftId prop */}
             <ShiftSelector 
               userId={user?.id || ''} 
               onShiftChange={setSelectedShift}
               disabled={!!todayAttendance}
+              currentSelectedShiftId={selectedShift?.id} // CRITICAL: This ensures the component shows the correct shift
             />
 
             {/* Current time and check-in/out */}

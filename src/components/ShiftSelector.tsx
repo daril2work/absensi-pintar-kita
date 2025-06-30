@@ -24,13 +24,13 @@ interface ShiftSelectorProps {
   userId: string;
   onShiftChange?: (shift: Shift | null) => void;
   disabled?: boolean;
+  currentSelectedShiftId?: string; // NEW: Prop to control which shift is selected
 }
 
-export const ShiftSelector = ({ userId, onShiftChange, disabled = false }: ShiftSelectorProps) => {
+export const ShiftSelector = ({ userId, onShiftChange, disabled = false, currentSelectedShiftId }: ShiftSelectorProps) => {
   const { toast } = useToast();
   const { t } = useLanguage();
   const [shifts, setShifts] = useState<Shift[]>([]);
-  const [selectedShift, setSelectedShift] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [hasAttendanceToday, setHasAttendanceToday] = useState(false);
 
@@ -58,11 +58,8 @@ export const ShiftSelector = ({ userId, onShiftChange, disabled = false }: Shift
       const shiftsData = (data || []) as Shift[];
       setShifts(shiftsData);
       
-      // Set default shift to first available
-      if (shiftsData && shiftsData.length > 0 && !selectedShift) {
-        setSelectedShift(shiftsData[0].id);
-        onShiftChange?.(shiftsData[0]);
-      }
+      // REMOVED: Auto-selection logic since we now use controlled component
+      // The parent component will handle which shift should be selected
     } catch (error: any) {
       toast({
         title: t('general.error'),
@@ -102,7 +99,7 @@ export const ShiftSelector = ({ userId, onShiftChange, disabled = false }: Shift
       return;
     }
 
-    setSelectedShift(shiftId);
+    // REMOVED: setSelectedShift(shiftId); - no longer using internal state
     const selectedShiftData = shifts.find(s => s.id === shiftId);
     onShiftChange?.(selectedShiftData || null);
 
@@ -127,9 +124,8 @@ export const ShiftSelector = ({ userId, onShiftChange, disabled = false }: Shift
     }
   };
 
-  const getCurrentShift = () => {
-    return shifts.find(s => s.id === selectedShift);
-  };
+  // UPDATED: Get current shift from prop instead of internal state
+  const currentShift = shifts.find(s => s.id === currentSelectedShiftId);
 
   const formatShiftTime = (shift: Shift) => {
     return `${shift.jam_masuk} - ${shift.jam_keluar}`;
@@ -157,7 +153,6 @@ export const ShiftSelector = ({ userId, onShiftChange, disabled = false }: Shift
     );
   }
 
-  const currentShift = getCurrentShift();
   const shiftStatus = currentShift ? getShiftStatus(currentShift) : null;
 
   return (
@@ -185,7 +180,7 @@ export const ShiftSelector = ({ userId, onShiftChange, disabled = false }: Shift
         <div className="space-y-2">
           <label className="text-sm font-medium">{t('shift.selectShift')}</label>
           <Select 
-            value={selectedShift || undefined} 
+            value={currentSelectedShiftId || undefined} // UPDATED: Use prop value
             onValueChange={handleShiftChange}
             disabled={disabled || hasAttendanceToday}
           >
