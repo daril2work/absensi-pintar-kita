@@ -708,6 +708,11 @@ export default function Dashboard() {
                             Clock Out: {format(new Date(todayAttendance.clock_out_time), 'HH:mm')}
                           </p>
                         )}
+                        {!todayAttendance.clock_out_time && !todayAttendance.is_clocked_out && (
+                          <p className="text-amber-600 text-sm">
+                            Belum Clock Out
+                          </p>
+                        )}
                       </div>
                       <div className="mt-2 space-y-1">
                         {getStatusBadge(todayAttendance.status)}
