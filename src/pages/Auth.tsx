@@ -9,15 +9,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { useToast } from '@/hooks/use-toast';
-import { Clock, MapPin, Users, AlertCircle } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Clock, MapPin, Users } from 'lucide-react';
 
 export default function Auth() {
   const { user, profile, signIn, signUp, loading } = useAuth();
   const { t } = useLanguage();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
 
   // Form states
   const [signInData, setSignInData] = useState({ email: '', password: '' });
@@ -43,42 +41,17 @@ export default function Auth() {
     return <Navigate to={profile.role === 'admin' ? '/admin' : '/dashboard'} />;
   }
 
-  const getAuthErrorMessage = (error: any) => {
-    const errorMessage = error?.message || '';
-    
-    if (errorMessage.includes('Invalid login credentials') || errorMessage.includes('invalid_credentials')) {
-      return 'The email or password you entered is incorrect. Please check your credentials and try again.';
-    }
-    
-    if (errorMessage.includes('Email not confirmed')) {
-      return 'Please check your email and click the confirmation link before signing in.';
-    }
-    
-    if (errorMessage.includes('User not found')) {
-      return 'No account found with this email address. Please sign up first or check your email.';
-    }
-    
-    if (errorMessage.includes('Too many requests')) {
-      return 'Too many sign-in attempts. Please wait a few minutes before trying again.';
-    }
-    
-    return errorMessage || 'An unexpected error occurred. Please try again.';
-  };
-
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setAuthError(null);
 
     try {
       const { error } = await signIn(signInData.email, signInData.password);
       
       if (error) {
-        const friendlyMessage = getAuthErrorMessage(error);
-        setAuthError(friendlyMessage);
         toast({
           title: t('general.error'),
-          description: friendlyMessage,
+          description: error.message,
           variant: "destructive",
         });
       } else {
@@ -88,11 +61,9 @@ export default function Auth() {
         });
       }
     } catch (error: any) {
-      const friendlyMessage = getAuthErrorMessage(error);
-      setAuthError(friendlyMessage);
       toast({
         title: t('general.error'),
-        description: friendlyMessage,
+        description: error.message,
         variant: "destructive",
       });
     } finally {
@@ -103,17 +74,14 @@ export default function Auth() {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setAuthError(null);
 
     try {
       const { error } = await signUp(signUpData.email, signUpData.password, signUpData.name);
       
       if (error) {
-        const friendlyMessage = getAuthErrorMessage(error);
-        setAuthError(friendlyMessage);
         toast({
           title: t('general.error'),
-          description: friendlyMessage,
+          description: error.message,
           variant: "destructive",
         });
       } else {
@@ -125,20 +93,14 @@ export default function Auth() {
         setSignUpData({ email: '', password: '', name: '' });
       }
     } catch (error: any) {
-      const friendlyMessage = getAuthErrorMessage(error);
-      setAuthError(friendlyMessage);
       toast({
         title: t('general.error'),
-        description: friendlyMessage,
+        description: error.message,
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const clearError = () => {
-    setAuthError(null);
   };
 
   return (
@@ -211,17 +173,10 @@ export default function Auth() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {authError && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{authError}</AlertDescription>
-              </Alert>
-            )}
-            
             <Tabs defaultValue="signin" className="space-y-4">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signin" onClick={clearError}>{t('auth.signIn')}</TabsTrigger>
-                <TabsTrigger value="signup" onClick={clearError}>{t('auth.signUp')}</TabsTrigger>
+                <TabsTrigger value="signin">{t('auth.signIn')}</TabsTrigger>
+                <TabsTrigger value="signup">{t('auth.signUp')}</TabsTrigger>
               </TabsList>
               
               <TabsContent value="signin">
@@ -233,10 +188,7 @@ export default function Auth() {
                       type="email"
                       placeholder="your@email.com"
                       value={signInData.email}
-                      onChange={(e) => {
-                        setSignInData({ ...signInData, email: e.target.value });
-                        clearError();
-                      }}
+                      onChange={(e) => setSignInData({ ...signInData, email: e.target.value })}
                       required
                     />
                   </div>
@@ -247,10 +199,7 @@ export default function Auth() {
                       type="password"
                       placeholder="Your password"
                       value={signInData.password}
-                      onChange={(e) => {
-                        setSignInData({ ...signInData, password: e.target.value });
-                        clearError();
-                      }}
+                      onChange={(e) => setSignInData({ ...signInData, password: e.target.value })}
                       required
                     />
                   </div>
@@ -260,7 +209,6 @@ export default function Auth() {
                   
                   <div className="text-center text-sm text-gray-600 mt-4">
                     <p>Don't have an account? Switch to the Sign Up tab above.</p>
-                    <p className="mt-2">Having trouble? Make sure your email and password are correct.</p>
                   </div>
                 </form>
               </TabsContent>
@@ -274,10 +222,7 @@ export default function Auth() {
                       type="text"
                       placeholder="Your full name"
                       value={signUpData.name}
-                      onChange={(e) => {
-                        setSignUpData({ ...signUpData, name: e.target.value });
-                        clearError();
-                      }}
+                      onChange={(e) => setSignUpData({ ...signUpData, name: e.target.value })}
                       required
                     />
                   </div>
@@ -288,10 +233,7 @@ export default function Auth() {
                       type="email"
                       placeholder="your@email.com"
                       value={signUpData.email}
-                      onChange={(e) => {
-                        setSignUpData({ ...signUpData, email: e.target.value });
-                        clearError();
-                      }}
+                      onChange={(e) => setSignUpData({ ...signUpData, email: e.target.value })}
                       required
                     />
                   </div>
@@ -302,10 +244,7 @@ export default function Auth() {
                       type="password"
                       placeholder="Create a password"
                       value={signUpData.password}
-                      onChange={(e) => {
-                        setSignUpData({ ...signUpData, password: e.target.value });
-                        clearError();
-                      }}
+                      onChange={(e) => setSignUpData({ ...signUpData, password: e.target.value })}
                       required
                     />
                   </div>
