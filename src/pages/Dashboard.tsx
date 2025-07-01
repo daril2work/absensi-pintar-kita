@@ -492,10 +492,29 @@ export default function Dashboard() {
           variant: "destructive",
         });
       } else {
+        // CRITICAL FIX: Update the local state immediately after successful backend update
+        setTodayAttendance(prevAttendance => ({
+          ...prevAttendance,
+          clock_out_time: now.toISOString(),
+          clock_out_location: `${location.lat},${location.lng}`,
+          clock_out_security_data: JSON.stringify({
+            confidence: security.confidence,
+            riskLevel: security.riskLevel,
+            deviceFingerprint: security.deviceFingerprint,
+            warnings: security.warnings,
+            timestamp: now.toISOString(),
+            photoStatus,
+            photoUrl
+          }),
+          is_clocked_out: true
+        }));
+
         toast({
           title: t('general.success'),
           description: `Clock out successful at ${format(now, 'HH:mm')}!`,
         });
+        
+        // Still fetch from backend to ensure data consistency
         fetchTodayAttendance();
       }
     } catch (error: any) {
