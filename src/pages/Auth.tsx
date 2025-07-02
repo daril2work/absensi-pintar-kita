@@ -89,6 +89,8 @@ export default function Auth() {
           title: t('general.success'),
           description: "Account created successfully! Please check your email to verify your account.",
         });
+        // Clear the form after successful signup
+        setSignUpData({ email: '', password: '', name: '' });
       }
     } catch (error: any) {
       toast({
@@ -204,6 +206,10 @@ export default function Auth() {
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? "Signing in..." : t('auth.signIn')}
                   </Button>
+                  
+                  <div className="text-center text-sm text-gray-600 mt-4">
+                    <p>Don't have an account? Switch to the Sign Up tab above.</p>
+                  </div>
                 </form>
               </TabsContent>
               
@@ -245,6 +251,10 @@ export default function Auth() {
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? "Creating account..." : t('auth.signUp')}
                   </Button>
+                  
+                  <div className="text-center text-sm text-gray-600 mt-4">
+                    <p>Already have an account? Switch to the Sign In tab above.</p>
+                  </div>
                 </form>
               </TabsContent>
             </Tabs>

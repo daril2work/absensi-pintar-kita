@@ -13,9 +13,13 @@ export type Database = {
         Row: {
           alasan: string | null
           approved_by: string | null
+          clock_out_location: string | null
+          clock_out_security_data: Json | null
+          clock_out_time: string | null
           created_at: string | null
           device_fingerprint: string | null
           id: string
+          is_clocked_out: boolean | null
           lokasi: string | null
           metode: Database["public"]["Enums"]["attendance_method"]
           photo_url: string | null
@@ -29,9 +33,13 @@ export type Database = {
         Insert: {
           alasan?: string | null
           approved_by?: string | null
+          clock_out_location?: string | null
+          clock_out_security_data?: Json | null
+          clock_out_time?: string | null
           created_at?: string | null
           device_fingerprint?: string | null
           id?: string
+          is_clocked_out?: boolean | null
           lokasi?: string | null
           metode?: Database["public"]["Enums"]["attendance_method"]
           photo_url?: string | null
@@ -45,9 +53,13 @@ export type Database = {
         Update: {
           alasan?: string | null
           approved_by?: string | null
+          clock_out_location?: string | null
+          clock_out_security_data?: Json | null
+          clock_out_time?: string | null
           created_at?: string | null
           device_fingerprint?: string | null
           id?: string
+          is_clocked_out?: boolean | null
           lokasi?: string | null
           metode?: Database["public"]["Enums"]["attendance_method"]
           photo_url?: string | null
@@ -219,6 +231,48 @@ export type Database = {
           nama_shift?: string
         }
         Relationships: []
+      }
+      user_shifts: {
+        Row: {
+          created_at: string | null
+          id: string
+          shift_id: string
+          tanggal: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          shift_id: string
+          tanggal: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          shift_id?: string
+          tanggal?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_shifts_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shift"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_shifts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

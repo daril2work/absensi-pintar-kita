@@ -56,14 +56,19 @@ export default function Dashboard() {
   }, [todayAttendance, selectedShift, currentTime]);
 
   const checkClockOutButtonVisibility = () => {
-    if (!todayAttendance || !selectedShift || todayAttendance.is_clocked_out) {
+    if (!todayAttendance || todayAttendance.is_clocked_out || todayAttendance.clock_out_time) {
       setShowClockOutButton(false);
       return;
     }
 
     const now = new Date();
     const currentTime = format(now, 'HH:mm');
-    const shiftEnd = selectedShift.jam_keluar;
+    const shiftEnd = selectedShift?.jam_keluar;
+    
+    if (!shiftEnd) {
+      setShowClockOutButton(false);
+      return;
+    }
     
     // Parse shift end time
     const shiftEndTime = new Date(`2000-01-01 ${shiftEnd}`);
@@ -122,7 +127,7 @@ export default function Dashboard() {
         console.log('✅ Today attendance found:', data[0]);
         setTodayAttendance(data[0]);
         
-        // UPDATED: Set the shift from attendance record - this is the key fix
+        // Set the shift from attendance record
         if (data[0].shift) {
           console.log('✅ Setting shift from attendance:', data[0].shift);
           setSelectedShift(data[0].shift);
@@ -130,7 +135,6 @@ export default function Dashboard() {
       } else {
         console.log('ℹ️ No attendance record found for today');
         setTodayAttendance(null);
-        // UPDATED: Clear selected shift if no attendance found
         setSelectedShift(null);
       }
     } catch (error: any) {
@@ -339,7 +343,7 @@ export default function Dashboard() {
         user_id: user?.id,
         waktu: now.toISOString(),
         status,
-        metode: 'absen' as const, // Fixed type casting
+        metode: 'absen' as const,
         lokasi: `${location.lat},${location.lng}`,
         shift_id: selectedShift.id,
         photo_url: photoUrl,
@@ -402,7 +406,7 @@ export default function Dashboard() {
   };
 
   const handleClockOut = async () => {
-    if (!todayAttendance || todayAttendance.is_clocked_out) {
+    if (!todayAttendance || todayAttendance.is_clocked_out || todayAttendance.clock_out_time) {
       toast({
         title: t('general.error'),
         description: 'No active attendance record found or already clocked out.',
@@ -492,11 +496,32 @@ export default function Dashboard() {
           variant: "destructive",
         });
       } else {
+        // Update the local state immediately after successful backend update
+        setTodayAttendance(prevAttendance => ({
+          ...prevAttendance,
+          clock_out_time: now.toISOString(),
+          clock_out_location: `${location.lat},${location.lng}`,
+          clock_out_security_data: JSON.stringify({
+            confidence: security.confidence,
+            riskLevel: security.riskLevel,
+            deviceFingerprint: security.deviceFingerprint,
+            warnings: security.warnings,
+            timestamp: now.toISOString(),
+            photoStatus,
+            photoUrl
+          }),
+          is_clocked_out: true
+        }));
+
         toast({
           title: t('general.success'),
           description: `Clock out successful at ${format(now, 'HH:mm')}!`,
         });
-        fetchTodayAttendance();
+        
+        // Force re-fetch to ensure data consistency
+        setTimeout(() => {
+          fetchTodayAttendance();
+        }, 1000);
       }
     } catch (error: any) {
       toast({
@@ -640,12 +665,12 @@ export default function Dashboard() {
               </Alert>
             )}
 
-            {/* Shift Selection - UPDATED: Pass currentSelectedShiftId prop */}
+            {/* Shift Selection */}
             <ShiftSelector 
               userId={user?.id || ''} 
               onShiftChange={setSelectedShift}
               disabled={!!todayAttendance}
-              currentSelectedShiftId={selectedShift?.id} // CRITICAL: This ensures the component shows the correct shift
+              currentSelectedShiftId={selectedShift?.id}
             />
 
             {/* Current time and check-in/out */}
@@ -694,10 +719,10 @@ export default function Dashboard() {
                   <div className="text-center py-8">
                     <div className="mb-4">
                       <div className="text-4xl mb-2">
-                        {todayAttendance.is_clocked_out ? '✅' : '🕐'}
+                        {(todayAttendance.is_clocked_out || todayAttendance.clock_out_time) ? '✅' : '🕐'}
                       </div>
                       <h3 className="text-lg font-semibold">
-                        {todayAttendance.is_clocked_out ? 'Completed for Today' : t('dashboard.alreadyCheckedIn')}
+                        {(todayAttendance.is_clocked_out || todayAttendance.clock_out_time) ? 'Completed for Today' : t('dashboard.alreadyCheckedIn')}
                       </h3>
                       <div className="space-y-2">
                         <p className="text-gray-600">
@@ -731,7 +756,7 @@ export default function Dashboard() {
                     </div>
                     
                     {/* Clock Out Button */}
-                    {showClockOutButton && !todayAttendance.is_clocked_out && (
+                    {showClockOutButton && !todayAttendance.is_clocked_out && !todayAttendance.clock_out_time && (
                       <div className="mt-6">
                         <Button 
                           onClick={handleClockOut}
@@ -826,7 +851,7 @@ export default function Dashboard() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Dynamic Statistics - Replace the old static stats */}
+            {/* Dynamic Statistics */}
             {user?.id && <DashboardStats userId={user.id} />}
 
             {/* Valid locations */}
