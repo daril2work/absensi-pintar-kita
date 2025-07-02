@@ -24,7 +24,15 @@ export const AttendanceHistory = ({ userId }: AttendanceHistoryProps) => {
     setLoading(true);
     const { data, error } = await supabase
       .from('absensi')
-      .select('*')
+      .select(`
+        *,
+        shift:shift_id (
+          id,
+          nama_shift,
+          jam_masuk,
+          jam_keluar
+        )
+      `)
       .eq('user_id', userId)
       .order('waktu', { ascending: false })
       .limit(10);
@@ -54,7 +62,7 @@ export const AttendanceHistory = ({ userId }: AttendanceHistoryProps) => {
   };
 
   const formatWorkingHours = (clockIn: string, clockOut?: string) => {
-    if (!clockOut) return 'In Progress';
+    if (!clockOut) return 'Belum Clock Out';
     
     const start = new Date(clockIn);
     const end = new Date(clockOut);
@@ -110,6 +118,7 @@ export const AttendanceHistory = ({ userId }: AttendanceHistoryProps) => {
                   <TableHead>Working Hours</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Method</TableHead>
+                  <TableHead>Shift</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -131,7 +140,9 @@ export const AttendanceHistory = ({ userId }: AttendanceHistoryProps) => {
                           {format(new Date(record.clock_out_time), 'HH:mm')}
                         </div>
                       ) : (
-                        <span className="text-gray-400 text-sm">-</span>
+                        <Badge variant="secondary" className="text-xs">
+                          Belum Clock Out
+                        </Badge>
                       )}
                     </TableCell>
                     <TableCell>
@@ -144,6 +155,18 @@ export const AttendanceHistory = ({ userId }: AttendanceHistoryProps) => {
                     </TableCell>
                     <TableCell>
                       {getMethodBadge(record.metode)}
+                    </TableCell>
+                    <TableCell>
+                      {record.shift ? (
+                        <div className="text-sm">
+                          <div className="font-medium">{record.shift.nama_shift}</div>
+                          <div className="text-xs text-gray-500">
+                            {record.shift.jam_masuk} - {record.shift.jam_keluar}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-sm">-</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

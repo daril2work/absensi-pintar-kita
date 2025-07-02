@@ -36,6 +36,9 @@ interface DailyHourData {
   actualHours: number;
   missingHours: number;
   hasAttendance: boolean;
+  clockInTime?: string;
+  clockOutTime?: string;
+  status?: string;
 }
 
 interface UserDailyData {
@@ -283,6 +286,9 @@ export const AttendanceReports = () => {
 
         let expectedHours = 0;
         let actualHours = 0;
+        let clockInTime = '';
+        let clockOutTime = '';
+        let status = '';
 
         dayAttendance.forEach(record => {
           if (record.shift && record.shift.jam_masuk && record.shift.jam_keluar) {
@@ -292,12 +298,21 @@ export const AttendanceReports = () => {
               record.shift.jam_keluar
             );
 
-            // Calculate actual hours if both check-in and check-out exist
+            // Set clock in time
+            clockInTime = format(new Date(record.waktu), 'HH:mm');
+            status = record.status;
+
+            // Calculate actual hours ONLY if both check-in and check-out exist
             if (record.waktu && record.clock_out_time) {
               actualHours += calculateHoursDifference(
                 format(new Date(record.waktu), 'HH:mm'),
                 format(new Date(record.clock_out_time), 'HH:mm')
               );
+              clockOutTime = format(new Date(record.clock_out_time), 'HH:mm');
+            } else {
+              // If no clock out, actual hours = 0 for this day
+              actualHours = 0;
+              clockOutTime = '';
             }
           }
         });
@@ -317,7 +332,10 @@ export const AttendanceReports = () => {
           expectedHours: Math.round(expectedHours * 100) / 100,
           actualHours: Math.round(actualHours * 100) / 100,
           missingHours: Math.round(missingHours * 100) / 100,
-          hasAttendance
+          hasAttendance,
+          clockInTime: clockInTime || undefined,
+          clockOutTime: clockOutTime || undefined,
+          status: status || undefined
         };
       });
 
@@ -367,7 +385,7 @@ export const AttendanceReports = () => {
           );
           totalExpectedHours += expectedHours;
 
-          // Calculate actual hours if both check-in and check-out exist
+          // Calculate actual hours ONLY if both check-in and check-out exist
           if (record.waktu && record.clock_out_time) {
             const actualHours = calculateHoursDifference(
               format(new Date(record.waktu), 'HH:mm'),
@@ -375,7 +393,7 @@ export const AttendanceReports = () => {
             );
             totalActualHours += actualHours;
           }
-          // If no clock out, consider it as incomplete (0 actual hours for that day)
+          // If no clock out, actual hours remain 0 for that day
         }
       });
 
@@ -418,6 +436,8 @@ export const AttendanceReports = () => {
       t('general.name'), 
       t('admin.date'), 
       t('general.time'), 
+      'Clock Out',
+      'Jam Aktual',
       t('attendance.status'), 
       t('general.method'), 
       'Jarak dari Lokasi Valid',
@@ -429,6 +449,11 @@ export const AttendanceReports = () => {
       record.profiles?.name || 'Unknown',
       format(new Date(record.waktu), 'yyyy-MM-dd'),
       format(new Date(record.waktu), 'HH:mm:ss'),
+      record.clock_out_time ? format(new Date(record.clock_out_time), 'HH:mm:ss') : 'Belum Clock Out',
+      record.clock_out_time ? calculateHoursDifference(
+        format(new Date(record.waktu), 'HH:mm'),
+        format(new Date(record.clock_out_time), 'HH:mm')
+      ).toFixed(2) + ' jam' : '0 jam',
       t(`status.${record.status}`),
       record.metode === 'absen' ? t('admin.regular') : t('admin.makeup'),
       getDistanceFromValidLocations(record.lokasi),
@@ -481,8 +506,10 @@ export const AttendanceReports = () => {
         if (dayData && dayData.hasAttendance) {
           if (dayData.missingHours > 0) {
             row.push(`-${dayData.missingHours}h`);
-          } else {
+          } else if (dayData.actualHours > 0) {
             row.push('✓');
+          } else {
+            row.push('No Clock Out');
           }
         } else {
           row.push('-');
@@ -538,7 +565,12 @@ export const AttendanceReports = () => {
       return "bg-red-100 text-red-800 border-red-200";
     }
 
-    return "bg-green-100 text-green-800 border-green-200";
+    if (dayData.actualHours > 0) {
+      return "bg-green-100 text-green-800 border-green-200";
+    }
+
+    // Has attendance but no clock out
+    return "bg-yellow-100 text-yellow-800 border-yellow-200";
   };
 
   const getCellContent = (dayData: DailyHourData) => {
@@ -550,7 +582,12 @@ export const AttendanceReports = () => {
       return `-${dayData.missingHours}h`;
     }
 
-    return "✓";
+    if (dayData.actualHours > 0) {
+      return "✓";
+    }
+
+    // Has attendance but no clock out
+    return "⚠️";
   };
 
   const resetFilters = () => {
@@ -594,7 +631,7 @@ export const AttendanceReports = () => {
                 {t('admin.filterExport')}
               </CardTitle>
               <CardDescription>
-                Laporan jam kerja dengan ringkasan dan grid harian terintegrasi
+                Laporan jam kerja dengan perhitungan clock in/out yang akurat
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -691,6 +728,12 @@ export const AttendanceReports = () => {
                     <span>Lengkap</span>
                   </div>
                   <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-yellow-100 border border-yellow-200 rounded flex items-center justify-center text-yellow-800 text-xs font-bold">
+                      ⚠️
+                    </div>
+                    <span>Belum Clock Out</span>
+                  </div>
+                  <div className="flex items-center gap-2">
                     <div className="w-6 h-6 bg-gray-100 border border-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
                       -
                     </div>
@@ -706,11 +749,12 @@ export const AttendanceReports = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Clock className="h-5 w-5" />
-                Laporan Jam Kerja & Grid Harian
+                Laporan Jam Kerja & Grid Harian (Clock In/Out)
               </CardTitle>
               <CardDescription>
                 Ringkasan jam kerja dengan detail harian per karyawan. 
                 <strong> Expected</strong> = Target jam kerja berdasarkan shift yang dijadwalkan.
+                <strong> Actual</strong> = Jam kerja aktual berdasarkan clock in dan clock out.
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
@@ -999,7 +1043,9 @@ export const AttendanceReports = () => {
                       <TableRow>
                         <TableHead>{t('admin.employee')}</TableHead>
                         <TableHead>{t('admin.date')}</TableHead>
-                        <TableHead>{t('general.time')}</TableHead>
+                        <TableHead>Clock In</TableHead>
+                        <TableHead>Clock Out</TableHead>
+                        <TableHead>Jam Aktual</TableHead>
                         <TableHead>{t('attendance.status')}</TableHead>
                         <TableHead>{t('general.method')}</TableHead>
                         <TableHead className="min-w-[180px]">
@@ -1028,6 +1074,27 @@ export const AttendanceReports = () => {
                           </TableCell>
                           <TableCell>
                             {format(new Date(record.waktu), 'HH:mm')}
+                          </TableCell>
+                          <TableCell>
+                            {record.clock_out_time ? (
+                              format(new Date(record.clock_out_time), 'HH:mm')
+                            ) : (
+                              <Badge variant="secondary" className="text-xs">
+                                Belum Clock Out
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {record.clock_out_time ? (
+                              <span className="font-mono">
+                                {calculateHoursDifference(
+                                  format(new Date(record.waktu), 'HH:mm'),
+                                  format(new Date(record.clock_out_time), 'HH:mm')
+                                ).toFixed(2)}h
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">0h</span>
+                            )}
                           </TableCell>
                           <TableCell>
                             {getStatusBadge(record.status)}
